@@ -2,11 +2,12 @@
 
 pragma solidity ^0.8.20;
 
-import "./Registry.sol";
+// NFT related import(s)
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721.sol";
+
 
 contract WeddingContract {
-    WeddingRegistry public wedReg; // The wedding registry that approves and issues wedding certificates
-
+    address public wedReg; // The wedding registry that approves and issues wedding certificates
     uint32 public weddingDate; // Considered as unix time, can be any timestamp but for the calculation the start of the day will be inferred, set in constructor
     address[] public fiances; // Store the fiances' addresses, set in constructor
 
@@ -18,11 +19,11 @@ contract WeddingContract {
 
     address internal fianceWhichWantsToBurn;
     bool internal authorityApprovedBurning = false;
-    address internal contractCreator; // Store the creator's address in case of destruction
 
     uint16 public timeToVote = 36000; // 10 hours in seconds
 
     event inviteSent(address invitee);
+    // TODO more events
 
     modifier onlyBeforeWeddingDay() {
         uint32 startOfDay = weddingDate - (weddingDate % 86400); // Convert to start of the day
@@ -111,27 +112,12 @@ contract WeddingContract {
 
     constructor(
         address[] _fiances,
-        address[] _authorities,
         uint32 _weddingDate,
-        address weddingRegistryAddress
     ) {
-        wedReg = WeddingRegistry(weddingRegistryAddress);
-
-        // ceck that all fiances are not married by calling the registry
-        for (uint32 i = 0; i < _fiances.length; i++) {
-            require(
-                !wedReg.isMarried(_fiances[i]),
-                "One of the fiances is already married"
-            );
-        }
-
-        // TODO check that the fiances addresses contain no duplicates
-
-        // TODO check that the date is at least the next day
+        wedReg = msg.sender;
 
         fiances = _fiances;
         weddingDate = _weddingDate;
-        contractCreator = msg.sender;
 
         fiancesConfirmations = new bool[](fiances.length); // by default, all fiances are set to false
     }
@@ -170,7 +156,7 @@ contract WeddingContract {
         /* Destroyes the contract and sends the funds back to the creator.
         This can only be done before the wedding day and only by one of the fiances.
         */
-        selfdestruct(payable(contractCreator));
+        selfdestruct(payable(wedReg));
     }
 
     function voteAgainstWedding()
@@ -214,7 +200,7 @@ contract WeddingContract {
 
         // issue an NFT if all fiances have confirmed
         if (allConfirmed) {
-            wedReg.issueWeddingCertificate(address(this));
+            return wedReg.issueWeddingCertificate(address(this));
         }
     }
 
@@ -247,3 +233,133 @@ contract WeddingContract {
         }
     }
 }
+
+
+contract WeddingRegistry is ERC721 {
+    address[] authorities;
+    address[] public deployedContracts;
+    mapping(address => uint256) public fianceAddressesToTokenIds;
+
+    modifier onlyAuthorities() {
+        require(
+            isAuthority(msg.sender),
+            "Only authorized accounts can call this function"
+        );
+        _;
+    }
+
+    function isAuthority(address _address) internal view returns (bool) {
+        for (uint32 i = 0; i < authorities.length; i++) {
+            if (authorities[i] == _address) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    constructor(address[] _authorities) ERC721("Wedding", "WED") {
+        authorities = _authorities;
+    }
+
+    function updateAuthorities(address[] _authorities) public onlyAuthorities {
+        authorities = _authorities;
+    }
+
+    modifier onlyDeployedContracts() {
+        require(
+            isDeployedContract(msg.sender),
+            "Only deployed contracts can call this function"
+        );
+        _;
+    }
+
+    function isDeployedContract(address _address) internal view returns (bool) {
+        for (uint32 i = 0; i < deployedContracts.length; i++) {
+            if (deployedContracts[i] == _address) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function isMarried(address _address) public view returns (bool) {
+        return balanceOf(_address) > 0;
+    }
+
+    function initiateWedding(
+        address[] _fiances,
+        uint32 _weddingDate,
+    ){
+        // ceck that all fiances are not married by calling the registry
+        for (uint32 i = 0; i < _fiances.length; i++) {
+            require(
+                !isMarried(_fiances[i]),
+                "One of the fiances is already married"
+            );
+        }
+
+        // TODO check that the fiances addresses contain no duplicates
+
+        // TODO check that the date is at least the next day
+
+        // deploy a new wedding contract
+        address newContractAddr = address(new WeddingContract(_fiances, weddingDate));
+        deployedContracts.push(newContractAddr);
+
+        return newContractAddr;
+
+    }
+
+    function issueWeddingCertificate(address[] fiances_addresses) public onlyDeployedContracts {
+        // check again that all fiances are not married. In case multiple wedding contracts have been initiated before the wedding date
+        for (uint32 i = 0; i < fiances_addresses.length; i++) {
+            require(
+                !isMarried(fiances_addresses[i]),
+                "One of the fiances has married in the meantime"
+            );
+        }
+        
+        // owner of the certificate is the registry itself, use the total supply as the token id, and the token uri as the wedding certificate
+        uint256 tokenId = totalSupply() + 1;
+        _safeMint(address(this), tokenId);
+
+        return tokenId;
+    }
+
+    function cancelMarriage() public {
+        _burn(tokenId);
+    }
+}
+
+// constructor(name_, symbol_)
+// supportsInterface(interfaceId)
+// balanceOf(owner)
+// ownerOf(tokenId)
+// name()
+// symbol()
+// tokenURI(tokenId)
+// _baseURI()
+// approve(to, tokenId)
+// getApproved(tokenId)
+// setApprovalForAll(operator, approved)
+// isApprovedForAll(owner, operator)
+// transferFrom(from, to, tokenId)
+// safeTransferFrom(from, to, tokenId)
+// safeTransferFrom(from, to, tokenId, data)
+// _ownerOf(tokenId)
+// _getApproved(tokenId)
+// _isAuthorized(owner, spender, tokenId)
+// _checkAuthorized(owner, spender, tokenId)
+// _increaseBalance(account, value)
+// _update(to, tokenId, auth)
+// _mint(to, tokenId)
+// _safeMint(to, tokenId)
+// _safeMint(to, tokenId, data)
+// _burn(tokenId)
+// _transfer(from, to, tokenId)
+// _safeTransfer(from, to, tokenId)
+// _safeTransfer(from, to, tokenId, data)
+// _approve(to, tokenId, auth)
+// _approve(to, tokenId, auth, emitEvent)
+// _setApprovalForAll(owner, operator, approved)
+// _requireOwned(tokenId)
