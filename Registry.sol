@@ -327,7 +327,7 @@ contract WeddingRegistry is ERC721 {
     }
 
     function cancelMarriage() public {
-            _burn(tokenId);
+        _burn(tokenId);
     }
 }
 
