@@ -134,7 +134,9 @@ contract WeddingContract is ERC721URIStorage {
         fiances = _fiances;
         authorities = _authorities;
         weddingDate = _weddingDate;
+        contractCreator = msg.sender;
 
+        // initially set all fiances confirmations to false
         for (uint32 i = 0; i < _fiances.length; i++) {
             fiancesConfirmations.push(false);
         }
@@ -143,6 +145,12 @@ contract WeddingContract is ERC721URIStorage {
     function approveGuest(
         address _guest
     ) external onlyFiances onlyBeforeWeddingDay {
+        /* Adds a guest to the address-appovals-mapping of potential guests and marks the approval of the sender.
+        If the passed address is already a potential guest, the approval of the sender is marked.
+        If the guest is approved by all fiances, the guest is added to the list of approved guests and an event is emitted.
+        */
+
+        // preven that a guest is added to the list of approved guests more than once
         require(!isApprovedGuest(_guest), "Guest is already approved");
 
         // Mark the approval
@@ -165,6 +173,9 @@ contract WeddingContract is ERC721URIStorage {
     }
 
     function revokeEngagement() external onlyFiances onlyBeforeWeddingDay {
+        /* Destroyes the contract and sends the funds back to the creator.
+        This can only be done before the wedding day and only by one of the fiances.
+        */
         selfdestruct(payable(contractCreator));
     }
 
@@ -173,14 +184,23 @@ contract WeddingContract is ERC721URIStorage {
         onlyOnWeddingDayBeforeVotingEnd
         onlyGuestsWithVotingRight
     {
+        /* Votes against the wedding. If more than half of the guests vote against the wedding, the contract is destroyed.
+        Can only be called by approved guests and only on the wedding day before the voting period ends.
+        */
+
+        // add the sender to the list of guests who voted against the wedding
         votedAgainstWedding.push(msg.sender);
 
+        // cancel the wedding if more than half of the guests voted against it
         if (votedAgainstWedding.length >= approvedGuests.length / 2) {
             selfdestruct(payable(contractCreator));
         }
     }
 
     function confirmWedding() external onlyFiances onlyOnWeddingDayAfterVoting {
+        /* Confirms the wedding. If all fiances confirm the wedding, the contract mints a token and sets the tokenURI to "xxx".
+        Can only be called by fiances and only on the wedding day after the voting period ended.
+        */
         // Mark the confirmation for the sender
         for (uint32 i = 0; i < fiances.length; i++) {
             if (fiances[i] == msg.sender) {
@@ -198,14 +218,21 @@ contract WeddingContract is ERC721URIStorage {
             }
         }
 
+        // issue an NFT if all fiances have confirmed
         if (allConfirmed) {
             _mint(address(this), 1);
             _setTokenURI(1, "xxx");
         }
     }
 
-    // one of the spouses + authority can burn the marriage
     function burnMarriage() external onlyAfterWeddingDay {
+        /* Attempt to burn the marriage. If one of the fiances calls this function, the fianceWhichWantsToBurn is set to the sender.
+        If an authority calls this function, the authorityApprovedBurning is set to true.
+        If two different fiances want to burn, the marriage is burned or one fiance and an authority want to burn, the marriage is burned.
+        Can only be called after the wedding day.
+        If someone else than a fiance or an authority calls this function, nothing happens.
+        (No special modifier was used for this to reduce computational complexity)
+        */
         // the "first" fiance to call this function will be set as the fianceWhichWantsToBurn
         if (isFiance(msg.sender) && (fianceWhichWantsToBurn == address(0))) {
             fianceWhichWantsToBurn = msg.sender;
