@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.20;
 
-// NFT related import(s)
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "./Registry.sol";
 
-contract WeddingContract is ERC721URIStorage {
+contract WeddingContract {
+    WeddingRegistry public wedReg; // The wedding registry that approves and issues wedding certificates
+
     uint32 public weddingDate; // Considered as unix time, can be any timestamp but for the calculation the start of the day will be inferred, set in constructor
     address[] public fiances; // Store the fiances' addresses, set in constructor
-    address[] public authorities; // Store the authorities' addresses, set in constructor
 
     mapping(address => mapping(address => bool)) public potentialGuests; // {guest_address : {fiance_address : true/false}} stores all proposed guests and their approvals by the fiances
     address public approvedGuests; // Store the approved guests' addresses
@@ -90,23 +90,6 @@ contract WeddingContract is ERC721URIStorage {
         return false;
     }
 
-    modifier onlyAuthorities() {
-        require(
-            isAuthority(msg.sender),
-            "Only authorized accounts can call this function"
-        );
-        _;
-    }
-
-    function isAuthority(address _address) internal view returns (bool) {
-        for (uint32 i = 0; i < authorities.length; i++) {
-            if (authorities[i] == _address) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     modifier onlyGuestsWithVotingRight() {
         require(
             isApprovedGuest(_address) && !hasVotedAgainstWedding(_address),
@@ -127,19 +110,30 @@ contract WeddingContract is ERC721URIStorage {
     }
 
     constructor(
-        address[] memory _fiances,
-        address[] memory _authorities,
-        uint32 _weddingDate
-    ) ERC721("Wedding", "WED") {
+        address[] _fiances,
+        address[] _authorities,
+        uint32 _weddingDate,
+        address weddingRegistryAddress
+    ) {
+        wedReg = WeddingRegistry(weddingRegistryAddress);
+
+        // ceck that all fiances are not married by calling the registry
+        for (uint32 i = 0; i < _fiances.length; i++) {
+            require(
+                !wedReg.isMarried(_fiances[i]),
+                "One of the fiances is already married"
+            );
+        }
+
+        // TODO check that the fiances addresses contain no duplicates
+
+        // TODO check that the date is at least the next day
+
         fiances = _fiances;
-        authorities = _authorities;
         weddingDate = _weddingDate;
         contractCreator = msg.sender;
 
-        // initially set all fiances confirmations to false
-        for (uint32 i = 0; i < _fiances.length; i++) {
-            fiancesConfirmations.push(false);
-        }
+        fiancesConfirmations = new bool[](fiances.length); // by default, all fiances are set to false
     }
 
     function approveGuest(
@@ -154,7 +148,7 @@ contract WeddingContract is ERC721URIStorage {
         require(!isApprovedGuest(_guest), "Guest is already approved");
 
         // Mark the approval
-        guestApprovals[_guest][msg.sender] = true;
+        potentialGuests[_guest][msg.sender] = true;
 
         // Check if all fiances have approved the guest
         bool guestApprovedByAllFiances = true;
@@ -220,8 +214,7 @@ contract WeddingContract is ERC721URIStorage {
 
         // issue an NFT if all fiances have confirmed
         if (allConfirmed) {
-            _mint(address(this), 1);
-            _setTokenURI(1, "xxx");
+            wedReg.issueWeddingCertificate(address(this));
         }
     }
 
@@ -239,18 +232,18 @@ contract WeddingContract is ERC721URIStorage {
         }
 
         // an authority can approve the burning, so a single spouse can burn with the authority approval
-        if (isAuthority(msg.sender)) {
+        if (wedReg.isAuthority(msg.sender)) {
             authorityApprovedBurning = true;
         }
 
         // two different spouses want to burn
         if (isFiance(msg.sender) && (fianceWhichWantsToBurn != msg.sender)) {
-            _burn(1);
+            wedReg.cancelMarriage();
         }
 
         // a spouse wants to burn and some authority approved
         if (fianceWhichWantsToBurn != address(0) && authorityApprovedBurning) {
-            _burn(1);
+            wedReg.cancelMarriage();
         }
     }
 }
