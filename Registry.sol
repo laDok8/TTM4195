@@ -39,7 +39,7 @@ contract WeddingRegistry is ERC721 {
         return add2cert[_address] != 0;
     }
 
-    function issueWeddingCertificate(addresss[] fiances_addresses) public {
+    function issueWeddingCertificate(address[] fiances_addresses) public {
         require(!isMarried(_address), "Address is already married");
         // owner of the certificate is the registry itself, use the total supply as the token id, and the token uri as the wedding certificate
         uint256 tokenId = totalSupply() + 1;
@@ -49,6 +49,14 @@ contract WeddingRegistry is ERC721 {
             add2cert[fiances_addresses[i]] = tokenId;
         }
         cert2add[tokenId] = fiances_addresses;
+    }
+
+    function cancelMarriage() public {
+        require(isMarried(msg.sender), "Address is not married");
+        uint256 tokenId = add2cert[msg.sender];
+        _burn(tokenId);
+        delete add2cert[msg.sender];
+        delete cert2add[tokenId];
     }
 }
 
