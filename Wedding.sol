@@ -2,116 +2,23 @@
 
 pragma solidity ^0.8.20;
 
+import "./Interfaces.sol";
 
-interface IWeddingContract {
-    function getWeddingSuccessful() external view returns (bool);
-}
+contract WeddingContract is IWeddingContract {
+    IWeddingRegistry internal wedReg; // The wedding registry that approves and issues wedding certificates
+    uint32 internal weddingDate; // Considered as unix time, can be any timestamp but for the calculation the start of the day will be inferred, set in constructor
+    address[] internal fiances; // Store the fiances' addresses, set in constructor
 
+    mapping(address => mapping(address => bool)) internal potentialGuests; // {guest_address : {fiance_address : true/false}} stores all proposed guests and their approvals by the fiances
+    address[] internal approvedGuests; // Store the approved guests' addresses
+    address[] internal votedAgainstWedding; // Store the addresses of the guests who voted against the wedding
 
-contract WeddingRegistry {
-    address[] authorities;
-    mapping(address => address) public fianceAddressToWeddingContract; // for checking whether a address is married
-    mapping(address => address[]) public weddingContractToFiances;
-    uint256 public weddingContractCount = 0;
-
-
-    function isAuthority(address _address) external view returns (bool) {
-        for (uint32 i = 0; i < authorities.length; i++) {
-            if (authorities[i] == _address) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    modifier onlyAuthorities() {
-        bool isAuthrozed = false;
-        for (uint32 i = 0; i < authorities.length; i++) {
-            if (authorities[i] == msg.sender) {
-                isAuthrozed = true;
-            }
-        }
-        require(isAuthrozed,"Only authorized accounts can call this function");
-        _;
-    }
-
-    constructor(address[] memory _authorities) {
-        authorities = _authorities;
-    }
-
-    function updateAuthorities(address[] memory _authorities) public onlyAuthorities {
-        authorities = _authorities;
-    }
-
-    modifier onlyDeployedContracts() {
-        require(
-            isDeployedContract(msg.sender),
-            "Only deployed contracts can call this function"
-        );
-        _;
-    }
-
-    function isDeployedContract(address _address) internal view returns (bool) {
-        return weddingContractToFiances[_address].length > 0;
-    }
-
-    function isMarried(address _address) public view returns (bool) {
-        /* Checks whether a address is married by checking whether there is a wedding 
-        contract address associated with the address and if so whether the wedding was 
-        successful.
-        */
-        if ( fianceAddressToWeddingContract[_address] == address(0)) {
-            return false;
-        } else {
-            return IWeddingContract(fianceAddressToWeddingContract[_address]).getWeddingSuccessful();
-        }
-    }
-
-    function initiateWedding(address[] memory _fiances, uint32 _weddingDate) internal returns (address){
-        // ceck that all fiances are not married by calling the registry
-        for (uint32 i = 0; i < _fiances.length; i++) {
-            require(
-                !isMarried(_fiances[i]),
-                "One of the fiances is already married"
-            );
-        }
-
-        // TODO check that the fiances addresses contain no duplicates
-
-        // TODO check that the date is at least the next day
-
-        // deploy a new wedding contract
-        address newContractAddr = address(new WeddingContract(_fiances, _weddingDate, weddingContractCount++));
-        for (uint32 i = 0; i < _fiances.length; i++) {
-            fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
-        }
-        weddingContractToFiances[newContractAddr] = _fiances;
-
-        return newContractAddr;
-    }
-
-    function getMyWeddingContractAddress() public view returns (address) {
-        require(isMarried(msg.sender), "The fiance is not married"); // there can still be a contract address at someones address if the wedding was canceled
-        return fianceAddressToWeddingContract[msg.sender];
-    }
-}
-
-
-contract WeddingContract {
-    // TODO make variables internal and add getters for fiances
-    WeddingRegistry public wedReg; // The wedding registry that approves and issues wedding certificates
-    uint32 public weddingDate; // Considered as unix time, can be any timestamp but for the calculation the start of the day will be inferred, set in constructor
-    address[] public fiances; // Store the fiances' addresses, set in constructor
-
-    mapping(address => mapping(address => bool)) public potentialGuests; // {guest_address : {fiance_address : true/false}} stores all proposed guests and their approvals by the fiances
-    address[] public approvedGuests; // Store the approved guests' addresses
-    address[] public votedAgainstWedding; // Store the addresses of the guests who voted against the wedding
-
-    bool[] public fiancesConfirmations; // stores the confirmations of the fiances for the wedding
+    bool[] internal fiancesConfirmations; // stores the confirmations of the fiances for the wedding
 
     address internal fianceWhichWantsToBurn;
     bool internal authorityApprovedBurning = false;
 
+    bool internal isCanceled = false;
     bool internal weddingSuccessful = false;
     uint256 internal weddingId;
 
@@ -173,7 +80,10 @@ contract WeddingContract {
     }
 
     modifier onlyApprovedGuests() {
-        require(isApprovedGuest(msg.sender), "Only guests can call this function");
+        require(
+            isApprovedGuest(msg.sender),
+            "Only guests can call this function"
+        );
         _;
     }
 
@@ -206,11 +116,11 @@ contract WeddingContract {
     }
 
     constructor(
-        address[] memory  _fiances,
+        address[] memory _fiances,
         uint32 _weddingDate,
         uint256 _weddingId
     ) {
-        wedReg = WeddingRegistry(msg.sender);
+        wedReg = IWeddingRegistry(msg.sender);
 
         fiances = _fiances;
         weddingDate = _weddingDate;
@@ -253,7 +163,8 @@ contract WeddingContract {
         /* Destroyes the contract and sends the funds back to the creator.
         This can only be done before the wedding day and only by one of the fiances.
         */
-        selfdestruct(payable(address(wedReg)));
+        // selfdestruct(payable(address(wedReg)));
+        isCanceled = true;
     }
 
     function voteAgainstWedding()
@@ -270,7 +181,8 @@ contract WeddingContract {
 
         // cancel the wedding if more than half of the guests voted against it
         if (votedAgainstWedding.length >= approvedGuests.length / 2) {
-            selfdestruct(payable(address(wedReg)));
+            // selfdestruct(payable(address(wedReg)));
+            isCanceled = true;
         }
     }
 
@@ -302,7 +214,7 @@ contract WeddingContract {
         }
     }
 
-    function burnMarriage() external onlyAfterWeddingDay {
+    function divorce() external onlyAfterWeddingDay {
         /* Attempt to burn the marriage. If one of the fiances calls this function, the fianceWhichWantsToBurn is set to the sender.
         If an authority calls this function, the authorityApprovedBurning is set to true.
         If two different fiances want to burn, the marriage is burned or one fiance and an authority want to burn, the marriage is burned.
@@ -331,9 +243,5 @@ contract WeddingContract {
             // wedReg.cancelMarriage(fiances);
             weddingSuccessful = false;
         }
-    }
-
-    function getWeddingSuccessful() public view returns (bool) {
-        return weddingSuccessful;
     }
 }
