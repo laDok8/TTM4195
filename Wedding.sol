@@ -2,11 +2,8 @@
 
 pragma solidity ^0.8.20;
 
-// NFT related import(s)
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721.sol";
-
-
 contract WeddingContract {
+    // TODO make variables internal and add getters for fiances
     address public wedReg; // The wedding registry that approves and issues wedding certificates
     uint32 public weddingDate; // Considered as unix time, can be any timestamp but for the calculation the start of the day will be inferred, set in constructor
     address[] public fiances; // Store the fiances' addresses, set in constructor
@@ -19,6 +16,9 @@ contract WeddingContract {
 
     address internal fianceWhichWantsToBurn;
     bool internal authorityApprovedBurning = false;
+
+    bool internal weddingSuccessful = false;
+    uint256 internal weddingId;
 
     uint16 public timeToVote = 36000; // 10 hours in seconds
 
@@ -113,11 +113,13 @@ contract WeddingContract {
     constructor(
         address[] _fiances,
         uint32 _weddingDate,
+        uint256 _weddingId
     ) {
         wedReg = msg.sender;
 
         fiances = _fiances;
         weddingDate = _weddingDate;
+        weddingId = _weddingId;
 
         fiancesConfirmations = new bool[](fiances.length); // by default, all fiances are set to false
     }
@@ -200,7 +202,8 @@ contract WeddingContract {
 
         // issue an NFT if all fiances have confirmed
         if (allConfirmed) {
-            return wedReg.issueWeddingCertificate(address(this));
+            // return wedReg.issueWeddingCertificate(address(this)); // fails if one of the fiances has married in the meantime
+            weddingSuccessful = true;
         }
     }
 
@@ -224,21 +227,27 @@ contract WeddingContract {
 
         // two different spouses want to burn
         if (isFiance(msg.sender) && (fianceWhichWantsToBurn != msg.sender)) {
-            wedReg.cancelMarriage();
+            // wedReg.cancelMarriage(fiances);
+            weddingSuccessful = false;
         }
 
         // a spouse wants to burn and some authority approved
         if (fianceWhichWantsToBurn != address(0) && authorityApprovedBurning) {
-            wedReg.cancelMarriage();
+            // wedReg.cancelMarriage(fiances);
+            weddingSuccessful = false;
         }
+    }
+
+    function weddingSuccessful() public view onlyAuthorities returns (bool) {
+        return weddingSuccessful;
     }
 }
 
 
-contract WeddingRegistry is ERC721 {
+contract WeddingRegistry {
     address[] authorities;
-    address[] public deployedContracts;
-    mapping(address => uint256) public fianceAddressesToTokenIds;
+    mapping(address => address) public fianceAddressToWeddingContract; // for checking whether a address is married
+    uint256 public weddingContractCount = 0;
 
     modifier onlyAuthorities() {
         require(
@@ -257,7 +266,7 @@ contract WeddingRegistry is ERC721 {
         return false;
     }
 
-    constructor(address[] _authorities) ERC721("Wedding", "WED") {
+    constructor(address[] _authorities) {
         authorities = _authorities;
     }
 
@@ -274,16 +283,20 @@ contract WeddingRegistry is ERC721 {
     }
 
     function isDeployedContract(address _address) internal view returns (bool) {
-        for (uint32 i = 0; i < deployedContracts.length; i++) {
-            if (deployedContracts[i] == _address) {
-                return true;
-            }
-        }
-        return false;
+        return weddingContractsToFiances[_address].length > 0;
     }
 
     function isMarried(address _address) public view returns (bool) {
-        return balanceOf(_address) > 0;
+        /* Checks whether a address is married by checking whether there is a wedding 
+        contract address associated with the address and if so whether the wedding was 
+        successful.
+        */
+        weddingContractAddr = fianceAddressToWeddingContract[_address];
+        if weddingContractAddr == address(0) {
+            return false;
+        } else {
+            return weddingContractAddr.weddingSuccessful();
+        }
     }
 
     function initiateWedding(
@@ -303,63 +316,37 @@ contract WeddingRegistry is ERC721 {
         // TODO check that the date is at least the next day
 
         // deploy a new wedding contract
-        address newContractAddr = address(new WeddingContract(_fiances, weddingDate));
-        deployedContracts.push(newContractAddr);
+        address newContractAddr = address(new WeddingContract(_fiances, weddingDate, weddingContractCount++));
+        for (uint32 i = 0; i < _fiances.length; i++) {
+            fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
+        }
+        // weddingContractToFiances[newContractAddr] = _fiances;
 
         return newContractAddr;
-
     }
 
-    function issueWeddingCertificate(address[] fiances_addresses) public onlyDeployedContracts {
-        // check again that all fiances are not married. In case multiple wedding contracts have been initiated before the wedding date
-        for (uint32 i = 0; i < fiances_addresses.length; i++) {
-            require(
-                !isMarried(fiances_addresses[i]),
-                "One of the fiances has married in the meantime"
-            );
-        }
+    function getMyWeddingContractAddress() public view returns (address) {
+        require(isMarried(msg.sender), "The fiance is not married"); // there can still be a contract address at someones address if the wedding was canceled
+        return fianceAddressToWeddingContract[msg.sender];
+    }
+
+    // function issueWeddingCertificate() public onlyDeployedContracts {
+    //     // check again that all fiances are not married. In case multiple wedding contracts have been initiated before the wedding date
+    //     for (uint32 i = 0; i < weddingContractToFiances[msg.sender].length; i++) {
+    //         require(
+    //             !isMarried(weddingContractToFiances[msg.sender][i]),
+    //             "One of the fiances has married in the meantime"
+    //         );
+    //     }
         
-        // owner of the certificate is the registry itself, use the total supply as the token id, and the token uri as the wedding certificate
-        uint256 tokenId = totalSupply() + 1;
-        _safeMint(address(this), tokenId);
+    //     return tokenId;
+    // }
 
-        return tokenId;
-    }
-
-    function cancelMarriage() public {
-        _burn(tokenId);
-    }
+    // function cancelMarriage(address[] fiances) public onlyDeployedContracts {
+    //     tokenId = fianceAddressToTokenId[fiances[0]];
+    //     _burn(tokenId);
+    //     for (uint32 i = 0; i < fiances.length; i++) {
+    //         fianceAddressToTokenId[fiances[i]] = 0;
+    //     }
+    // }
 }
-
-// constructor(name_, symbol_)
-// supportsInterface(interfaceId)
-// balanceOf(owner)
-// ownerOf(tokenId)
-// name()
-// symbol()
-// tokenURI(tokenId)
-// _baseURI()
-// approve(to, tokenId)
-// getApproved(tokenId)
-// setApprovalForAll(operator, approved)
-// isApprovedForAll(owner, operator)
-// transferFrom(from, to, tokenId)
-// safeTransferFrom(from, to, tokenId)
-// safeTransferFrom(from, to, tokenId, data)
-// _ownerOf(tokenId)
-// _getApproved(tokenId)
-// _isAuthorized(owner, spender, tokenId)
-// _checkAuthorized(owner, spender, tokenId)
-// _increaseBalance(account, value)
-// _update(to, tokenId, auth)
-// _mint(to, tokenId)
-// _safeMint(to, tokenId)
-// _safeMint(to, tokenId, data)
-// _burn(tokenId)
-// _transfer(from, to, tokenId)
-// _safeTransfer(from, to, tokenId)
-// _safeTransfer(from, to, tokenId, data)
-// _approve(to, tokenId, auth)
-// _approve(to, tokenId, auth, emitEvent)
-// _setApprovalForAll(owner, operator, approved)
-// _requireOwned(tokenId)
