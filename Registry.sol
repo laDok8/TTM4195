@@ -3,17 +3,23 @@
 pragma solidity ^0.8.20;
 
 import "./Interfaces.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-contract WeddingRegistry is IWeddingRegistry, ERC721 {
+contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     address[] public authorities;
 
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
-    mapping(address => address[]) internal weddingContractToFiances;
 
-    uint256 public weddingContractCount = 0;
+    function isAuthority(address _address) external view returns (bool) {
+        for (uint32 i = 0; i < authorities.length; i++) {
+            if (authorities[i] == _address) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-    function isAuthority(address _address) public view returns (bool) {
+    function _isAuthority(address _address) internal view returns (bool) {
         for (uint32 i = 0; i < authorities.length; i++) {
             if (authorities[i] == _address) {
                 return true;
@@ -24,7 +30,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721 {
 
     modifier onlyAuthorities() {
         require(
-            isAuthority(msg.sender),
+            _isAuthority(msg.sender),
             "Only authorized accounts can call this function"
         );
         _;
@@ -46,7 +52,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721 {
     }
 
     function isDeployedContract(address _address) internal view returns (bool) {
-        return weddingContractToFiances[_address].length > 0;
+        return IWeddingContract(_address).getRegistryAddress() == address(this);
     }
 
     function isMarried(address _address) internal view returns (bool) {
@@ -57,13 +63,11 @@ contract WeddingRegistry is IWeddingRegistry, ERC721 {
         if (fianceAddressToWeddingContract[_address] == address(0)) {
             return false;
         } else {
-            return
-                IWeddingContract(fianceAddressToWeddingContract[_address])
-                    .getWeddingSuccessful();
+            return balanceOf(fianceAddressToWeddingContract[_address]) > 0;
         }
     }
 
-    constructor(address[] memory _authorities) {
+    constructor(address[] memory _authorities) ERC721("Wedding", "WED") {
         authorities = _authorities;
     }
 
@@ -85,18 +89,33 @@ contract WeddingRegistry is IWeddingRegistry, ERC721 {
 
         // deploy a new wedding contract
         address newContractAddr = address(
-            new WeddingContract(_fiances, _weddingDate, weddingContractCount++)
+            new IWeddingContract(_fiances, _weddingDate)
         );
-        for (uint32 i = 0; i < _fiances.length; i++) {
-            fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
-        }
-        weddingContractToFiances[newContractAddr] = _fiances;
+        // for (uint32 i = 0; i < _fiances.length; i++) {
+        //     fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
+        // }
+        // weddingContractToFiances[newContractAddr] = _fiances;
 
         return newContractAddr;
     }
 
-    function getMyWeddingContractAddress() external view returns (address) {
-        require(isMarried(msg.sender), "The fiance is not married"); // there can still be a contract address at someones address if the wedding was canceled
-        return fianceAddressToWeddingContract[msg.sender];
+    function issueWeddingCertificate()
+        external
+        onlyDeployedContracts
+        returns (uint256)
+    {
+        _mint(msg.sender, totalSupply());
+        return totalSupply() - 1;
     }
+
+    function burnWeddingCertificate(
+        uint256 _tokenId
+    ) external onlyDeployedContracts {
+        _burn(_tokenId);
+    }
+
+    // function getMyWeddingContractAddress() external view returns (address) {
+    //     require(isMarried(msg.sender), "The fiance is not married"); // there can still be a contract address at someones address if the wedding was canceled
+    //     return fianceAddressToWeddingContract[msg.sender];
+    // }
 }

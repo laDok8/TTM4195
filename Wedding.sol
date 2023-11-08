@@ -19,10 +19,8 @@ contract WeddingContract is IWeddingContract {
     bool internal authorityApprovedBurning = false;
 
     bool internal isCanceled = false;
-    bool internal weddingSuccessful = false;
-    uint256 internal weddingId;
 
-    uint16 public timeToVote = 36000; // 10 hours in seconds
+    uint16 public constant timeToVote = 36000; // 10 hours in seconds
 
     event inviteSent(address invitee);
     // TODO more events
@@ -115,23 +113,27 @@ contract WeddingContract is IWeddingContract {
         return false;
     }
 
-    constructor(
-        address[] memory _fiances,
-        uint32 _weddingDate,
-        uint256 _weddingId
-    ) {
+    modifier onlyNotCanceled() {
+        require(!isCanceled, "The wedding has been canceled");
+        _;
+    }
+
+    function getRegistryAddress() external view returns (address) {
+        return address(wedReg);
+    }
+
+    constructor(address[] memory _fiances, uint32 _weddingDate) {
         wedReg = IWeddingRegistry(msg.sender);
 
         fiances = _fiances;
         weddingDate = _weddingDate;
-        weddingId = _weddingId;
 
         fiancesConfirmations = new bool[](fiances.length); // by default, all fiances are set to false
     }
 
     function approveGuest(
         address _guest
-    ) external onlyFiances onlyBeforeWeddingDay {
+    ) external onlyFiances onlyBeforeWeddingDay onlyNotCanceled {
         /* Adds a guest to the address-appovals-mapping of potential guests and marks the approval of the sender.
         If the passed address is already a potential guest, the approval of the sender is marked.
         If the guest is approved by all fiances, the guest is added to the list of approved guests and an event is emitted.
@@ -159,7 +161,12 @@ contract WeddingContract is IWeddingContract {
         }
     }
 
-    function revokeEngagement() external onlyFiances onlyBeforeWeddingDay {
+    function revokeEngagement()
+        external
+        onlyFiances
+        onlyBeforeWeddingDay
+        onlyNotCanceled
+    {
         /* Destroyes the contract and sends the funds back to the creator.
         This can only be done before the wedding day and only by one of the fiances.
         */
@@ -171,6 +178,7 @@ contract WeddingContract is IWeddingContract {
         external
         onlyOnWeddingDayBeforeVotingEnd
         onlyGuestsWithVotingRight
+        onlyNotCanceled
     {
         /* Votes against the wedding. If more than half of the guests vote against the wedding, the contract is destroyed.
         Can only be called by approved guests and only on the wedding day before the voting period ends.
@@ -186,7 +194,12 @@ contract WeddingContract is IWeddingContract {
         }
     }
 
-    function confirmWedding() external onlyFiances onlyOnWeddingDayAfterVoting {
+    function confirmWedding()
+        external
+        onlyFiances
+        onlyOnWeddingDayAfterVoting
+        onlyNotCanceled
+    {
         /* Confirms the wedding. If all fiances confirm the wedding, the contract mints a token and sets the tokenURI to "xxx".
         Can only be called by fiances and only on the wedding day after the voting period ended.
         */
@@ -209,12 +222,11 @@ contract WeddingContract is IWeddingContract {
 
         // issue an NFT if all fiances have confirmed
         if (allConfirmed) {
-            // return wedReg.issueWeddingCertificate(address(this)); // fails if one of the fiances has married in the meantime
-            weddingSuccessful = true;
+            return wedReg.issueWeddingCertificate();
         }
     }
 
-    function divorce() external onlyAfterWeddingDay {
+    function divorce() external onlyAfterWeddingDay onlyNotCanceled {
         /* Attempt to burn the marriage. If one of the fiances calls this function, the fianceWhichWantsToBurn is set to the sender.
         If an authority calls this function, the authorityApprovedBurning is set to true.
         If two different fiances want to burn, the marriage is burned or one fiance and an authority want to burn, the marriage is burned.
@@ -234,14 +246,12 @@ contract WeddingContract is IWeddingContract {
 
         // two different spouses want to burn
         if (isFiance(msg.sender) && (fianceWhichWantsToBurn != msg.sender)) {
-            // wedReg.cancelMarriage(fiances);
-            weddingSuccessful = false;
+            wedReg.burnWeddingCertificate();
         }
 
         // a spouse wants to burn and some authority approved
         if (fianceWhichWantsToBurn != address(0) && authorityApprovedBurning) {
-            // wedReg.cancelMarriage(fiances);
-            weddingSuccessful = false;
+            wedReg.burnWeddingCertificate();
         }
     }
 }
