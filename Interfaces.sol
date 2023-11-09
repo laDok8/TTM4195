@@ -30,7 +30,7 @@ interface IWeddingRegistry is IERC721Enumerable {
 
     // function getMyWeddingContractAddress() external view returns (address);
 
-    function issueWeddingCertificate() external returns (uint256);
+    function issueWeddingCertificate(address[] memory _fiances) external;
 
-    function burnWeddingCertificate(uint256 tokenId) external;
+    function burnWeddingCertificate() external;
 }

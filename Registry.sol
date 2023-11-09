@@ -3,21 +3,13 @@
 pragma solidity ^0.8.20;
 
 import "./Interfaces.sol";
+import "./Wedding.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
 contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     address[] public authorities;
 
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
-
-    function isAuthority(address _address) external view returns (bool) {
-        for (uint32 i = 0; i < authorities.length; i++) {
-            if (authorities[i] == _address) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     function _isAuthority(address _address) internal view returns (bool) {
         for (uint32 i = 0; i < authorities.length; i++) {
@@ -26,6 +18,10 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
             }
         }
         return false;
+    }
+
+    function isAuthority(address _address) external view returns (bool) {
+        return _isAuthority(_address);
     }
 
     modifier onlyAuthorities() {
@@ -56,19 +52,22 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     }
 
     function isMarried(address _address) internal view returns (bool) {
-        /* Checks whether a address is married by checking whether there is a wedding 
-        contract address associated with the address and if so whether the wedding was 
-        successful.
-        */
-        if (fianceAddressToWeddingContract[_address] == address(0)) {
-            return false;
-        } else {
-            return balanceOf(fianceAddressToWeddingContract[_address]) > 0;
-        }
+        return balanceOf(fianceAddressToWeddingContract[_address]) > 0;
     }
 
     constructor(address[] memory _authorities) ERC721("Wedding", "WED") {
         authorities = _authorities;
+    }
+
+    function noOneMarried(
+        address[] memory _fiances
+    ) internal view returns (bool) {
+        for (uint32 i = 0; i < _fiances.length; i++) {
+            if (isMarried(_fiances[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
     function initiateWedding(
@@ -76,12 +75,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         uint32 _weddingDate
     ) external returns (address) {
         // ceck that all fiances are not married by calling the registry
-        for (uint32 i = 0; i < _fiances.length; i++) {
-            require(
-                !isMarried(_fiances[i]),
-                "One of the fiances is already married"
-            );
-        }
+        require(noOneMarried(_fiances));
 
         // TODO check that the fiances addresses contain no duplicates
 
@@ -89,33 +83,34 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
 
         // deploy a new wedding contract
         address newContractAddr = address(
-            new IWeddingContract(_fiances, _weddingDate)
+            new WeddingContract(_fiances, _weddingDate)
         );
-        // for (uint32 i = 0; i < _fiances.length; i++) {
-        //     fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
-        // }
-        // weddingContractToFiances[newContractAddr] = _fiances;
+        for (uint32 i = 0; i < _fiances.length; i++) {
+            fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
+        }
 
         return newContractAddr;
     }
 
-    function issueWeddingCertificate()
-        external
-        onlyDeployedContracts
-        returns (uint256)
-    {
-        _mint(msg.sender, totalSupply());
-        return totalSupply() - 1;
-    }
-
-    function burnWeddingCertificate(
-        uint256 _tokenId
+    function issueWeddingCertificate(
+        address[] memory _fiances
     ) external onlyDeployedContracts {
-        _burn(_tokenId);
+        // TODO assert that none of the fiances has gotten married in the meantime
+        require(noOneMarried(_fiances));
+        _mint(msg.sender, totalSupply());
     }
 
-    // function getMyWeddingContractAddress() external view returns (address) {
-    //     require(isMarried(msg.sender), "The fiance is not married"); // there can still be a contract address at someones address if the wedding was canceled
-    //     return fianceAddressToWeddingContract[msg.sender];
-    // }
+    function burnWeddingCertificate() external onlyDeployedContracts {
+        _burn(tokenOfOwnerByIndex(msg.sender, 0));
+    }
+
+    function getMyWeddingTokenId() external view returns (uint256) {
+        require(isMarried(msg.sender), "You are not married");
+        return tokenOfOwnerByIndex(msg.sender, 0);
+    }
+
+    function getMyWeddingContractAddress() external view returns (address) {
+        require(isMarried(msg.sender), "You are not married");
+        return fianceAddressToWeddingContract[msg.sender];
+    }
 }

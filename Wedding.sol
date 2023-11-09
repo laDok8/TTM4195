@@ -18,7 +18,7 @@ contract WeddingContract is IWeddingContract {
     address internal fianceWhichWantsToBurn;
     bool internal authorityApprovedBurning = false;
 
-    bool internal isCanceled = false;
+    bool internal isCanceled = false; // only needed to revert any function calls if the wedding is canceled (selfdestruct is not used)
 
     uint16 public constant timeToVote = 36000; // 10 hours in seconds
 
@@ -122,6 +122,10 @@ contract WeddingContract is IWeddingContract {
         return address(wedReg);
     }
 
+    function getFiances() external view returns (address[] memory) {
+        return fiances;
+    }
+
     constructor(address[] memory _fiances, uint32 _weddingDate) {
         wedReg = IWeddingRegistry(msg.sender);
 
@@ -222,7 +226,8 @@ contract WeddingContract is IWeddingContract {
 
         // issue an NFT if all fiances have confirmed
         if (allConfirmed) {
-            return wedReg.issueWeddingCertificate();
+            wedReg.issueWeddingCertificate(fiances);
+            // TODO emit event
         }
     }
 
