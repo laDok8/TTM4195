@@ -49,6 +49,10 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     }
 
     function isMarried(address _address) internal view returns (bool) {
+        // ERC21 raises an error if the address is the zero address
+        if (fianceAddressToWeddingContract[_address] == address(0)) {
+            return false;
+        }
         return balanceOf(fianceAddressToWeddingContract[_address]) > 0;
     }
 
@@ -72,7 +76,10 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         uint32 _weddingDate
     ) external returns (address) {
         // ceck that all fiances are not married by calling the registry
-        require(noOneMarried(_fiances));
+        require(
+            noOneMarried(_fiances),
+            "One of the fiances is already married"
+        );
 
         // TODO check that the fiances addresses contain no duplicates
 
