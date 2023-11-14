@@ -118,10 +118,6 @@ contract WeddingContract is IWeddingContract {
         _;
     }
 
-    function getRegistryAddress() external view returns (address) {
-        return address(wedReg);
-    }
-
     function getFiances() external view returns (address[] memory) {
         return fiances;
     }

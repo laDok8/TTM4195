@@ -5,8 +5,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
 interface IWeddingContract {
-    function getRegistryAddress() external view returns (address);
-
     function approveGuest(address _guest) external;
 
     function revokeEngagement() external;

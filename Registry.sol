@@ -10,6 +10,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     address[] public authorities;
 
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
+    mapping(address => bool) internal deployedContracts; // for checking whether a calling address belongs to a deployed contract, using a hashmap for O(1) lookup instead of looping through an array
 
     function _isAuthority(address _address) internal view returns (bool) {
         for (uint32 i = 0; i < authorities.length; i++) {
@@ -41,14 +42,10 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
 
     modifier onlyDeployedContracts() {
         require(
-            isDeployedContract(msg.sender),
+            deployedContracts[msg.sender],
             "Only deployed contracts can call this function"
         );
         _;
-    }
-
-    function isDeployedContract(address _address) internal view returns (bool) {
-        return IWeddingContract(_address).getRegistryAddress() == address(this);
     }
 
     function isMarried(address _address) internal view returns (bool) {
@@ -88,6 +85,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         for (uint32 i = 0; i < _fiances.length; i++) {
             fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
         }
+        deployedContracts[newContractAddr] = true;
 
         return newContractAddr;
     }
