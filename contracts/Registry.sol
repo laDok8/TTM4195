@@ -49,6 +49,10 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     }
 
     function isMarried(address _address) internal view returns (bool) {
+        // ERC21 raises an error if the address is the zero address
+        if (fianceAddressToWeddingContract[_address] == address(0)) {
+            return false;
+        }
         return balanceOf(fianceAddressToWeddingContract[_address]) > 0;
     }
 
@@ -67,16 +71,38 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         return true;
     }
 
+    function hasDuplicates(
+        address[] memory array
+    ) internal pure returns (bool) {
+        for (uint256 i = 0; i < array.length; i++) {
+            for (uint256 j = 0; j < i; j++) {
+                if (array[i] == array[j]) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     function initiateWedding(
         address[] memory _fiances,
         uint32 _weddingDate
     ) external returns (address) {
         // ceck that all fiances are not married by calling the registry
-        require(noOneMarried(_fiances));
+        require(
+            noOneMarried(_fiances),
+            "One of the fiances is already married"
+        );
 
-        // TODO check that the fiances addresses contain no duplicates
+        require(!hasDuplicates(_fiances), "Duplicate fiance addresses");
 
-        // TODO check that the date is at least the next day
+        require(_fiances.length > 1, "At least two fiances are required");
+
+        require(
+            _weddingDate > (block.timestamp % 86400) + 86400,
+            "Wedding date must be at least on the next day"
+        );
 
         // deploy a new wedding contract
         address newContractAddr = address(

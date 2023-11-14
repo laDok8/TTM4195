@@ -2,3 +2,13 @@
 .vscode
 artifacts
 .deps
+
+# from brownie
+__pycache__
+.env
+.history
+.hypothesis/
+build/
+reports/
+
+node_modules/
