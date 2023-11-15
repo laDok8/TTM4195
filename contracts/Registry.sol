@@ -48,6 +48,14 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         _;
     }
 
+    modifier onlyMarried() {
+        require(
+            isMarried(msg.sender),
+            "Only married accounts can call this function"
+        );
+        _;
+    }
+
     function isMarried(address _address) internal view returns (bool) {
         // ERC21 raises an error if the address is the zero address
         if (fianceAddressToWeddingContract[_address] == address(0)) {
@@ -128,13 +136,17 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         _burn(tokenOfOwnerByIndex(msg.sender, 0));
     }
 
-    function getMyWeddingTokenId() external view returns (uint256) {
-        require(isMarried(msg.sender), "You are not married");
-        return tokenOfOwnerByIndex(msg.sender, 0);
+    function getMyWeddingTokenId() external view onlyMarried returns (uint256) {
+        return
+            tokenOfOwnerByIndex(fianceAddressToWeddingContract[msg.sender], 0);
     }
 
-    function getMyWeddingContractAddress() external view returns (address) {
-        require(isMarried(msg.sender), "You are not married");
+    function getMyWeddingContractAddress()
+        external
+        view
+        onlyMarried
+        returns (address)
+    {
         return fianceAddressToWeddingContract[msg.sender];
     }
 }
