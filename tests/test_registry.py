@@ -1,23 +1,29 @@
 import pytest
-from brownie import WeddingRegistry
+from brownie import WeddingRegistry, WeddingContract
 import brownie
 
 
-# @pytest.fixture
-# def registry_contract(accounts):
-#     authorities = accounts[0:3]
-#     reg_contract = WeddingRegistry.deploy(authorities, {"from": authorities[0]})
-#     return reg_contract, authorities
 def create_registry_contract(authorities):
     registry_contract = WeddingRegistry.deploy(authorities, {"from": authorities[0]})
     return registry_contract
 
 
-def add_succesfull_wedding(registry_contract, fiances, wedding_date, guests):
-    wedding_contract = registry_contract.initiateWedding(
+def add_succesfull_wedding(chain, registry_contract, fiances, wedding_date, guests):
+    wedding_contract_addr = registry_contract.initiateWedding(
         fiances, wedding_date, {"from": fiances[0]}
-    )
-    wedding_contract.inviteGuests(guests, {"from": fiances[0]})
+    ).return_value
+    wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+    for fiance in fiances:
+        for guest in guests:
+            wedding_contract.approveGuest(guest, {"from": fiance})
+
+    ceremony_begin = (wedding_date // 86400) * 86400 + 36000
+    chain.mine(timestamp=ceremony_begin)
+
+    for fiance in fiances:
+        wedding_contract.confirmWedding({"from": fiance}).wait(1)
+
     return wedding_contract
 
 
@@ -58,33 +64,41 @@ class TestAuthority:
 
 
 class TestInitiateWedding:
-    def test_wedding_contract_initiation(self, accounts):
-        authorities = accounts[0:3]
-        fiances = accounts[3:5]
+    def test_initiateWedding_no_duplicates(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:3])
 
-        registry_contract = WeddingRegistry.deploy(
-            authorities, {"from": authorities[0]}
-        )
-
-        # check that initiateion fails if duplicate fiances are passed
         with brownie.reverts("Duplicate fiance addresses"):
             registry_contract.initiateWedding(
-                [fiances[0], fiances[0], fiances[1]], 1923510554, {"from": fiances[0]}
+                [accounts[4], accounts[5], accounts[4]],
+                chain.time() + 86400,
+                {"from": accounts[4]},
             )
 
-        # check that more than 1 fiance is not allowed
+    def test_initiateWedding_min_fiances(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:3])
+
         with brownie.reverts("At least two fiances are required"):
             registry_contract.initiateWedding(
-                [fiances[0], fiances[1], fiances[2]], 1923510554, {"from": fiances[0]}
+                [accounts[4]], chain.time() + 86400, {"from": accounts[0]}
             )
 
-        # check that the wedding date is not in the past
-        with brownie.reverts("Wedding date must be in the future"):
-            registry_contract.initiateWedding(fiances, 0, {"from": fiances[0]})
+    def test_initiateWedding_future_date(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:3])
 
-        # finally create a valid wedding contract
-        wedding_addr = registry_contract.initiateWedding(
-            fiances, 1923510554, {"from": fiances[0]}
+        with brownie.reverts("Wedding date must be at least on the next day"):
+            registry_contract.initiateWedding(
+                accounts[4:7], chain.time(), {"from": accounts[4]}
+            )
+
+    def test_initiateWedding_all_fiances_are_unmarried(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:3])
+        add_succesfull_wedding(
+            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
         )
 
-        # TODO check that married fiances can not marry again
+        with brownie.reverts("One of the fiances is already married"):
+            registry_contract.initiateWedding(
+                [accounts[4], accounts[7], accounts[8]],
+                chain.time() + 86400,
+                {"from": accounts[4]},
+            )
