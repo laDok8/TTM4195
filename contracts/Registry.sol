@@ -12,32 +12,13 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
     mapping(address => bool) internal deployedContracts; // for checking whether a calling address belongs to a deployed contract, using a hashmap for O(1) lookup instead of looping through an array
 
-    function _isAuthority(address _address) internal view returns (bool) {
-        for (uint32 i = 0; i < authorities.length; i++) {
-            if (authorities[i] == _address) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function isAuthority(address _address) external view returns (bool) {
-        return _isAuthority(_address);
-    }
-
+    //// modifiers
     modifier onlyAuthorities() {
         require(
             _isAuthority(msg.sender),
             "Only authorized accounts can call this function"
         );
         _;
-    }
-
-    function updateAuthorities(
-        address[] memory _authorities
-    ) external onlyAuthorities {
-        // TODO check that authorities are not empty
-        authorities = _authorities;
     }
 
     modifier onlyDeployedContracts() {
@@ -56,16 +37,22 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         _;
     }
 
+    //// internal functions
+    function _isAuthority(address _address) internal view returns (bool) {
+        for (uint32 i = 0; i < authorities.length; i++) {
+            if (authorities[i] == _address) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function isMarried(address _address) internal view returns (bool) {
         // ERC21 raises an error if the address is the zero address
         if (fianceAddressToWeddingContract[_address] == address(0)) {
             return false;
         }
         return balanceOf(fianceAddressToWeddingContract[_address]) > 0;
-    }
-
-    constructor(address[] memory _authorities) ERC721("Wedding", "WED") {
-        authorities = _authorities;
     }
 
     function noOneMarried(
@@ -93,6 +80,23 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         return false;
     }
 
+    //// constructor
+    constructor(address[] memory _authorities) ERC721("Wedding", "WED") {
+        authorities = _authorities;
+    }
+
+    //// external functions
+    function isAuthority(address _address) external view returns (bool) {
+        return _isAuthority(_address);
+    }
+
+    function updateAuthorities(
+        address[] memory _authorities
+    ) external onlyAuthorities {
+        require(_authorities.length > 0, "Authorities cannot be empty");
+        authorities = _authorities;
+    }
+
     function initiateWedding(
         address[] memory _fiances,
         uint32 _weddingDate
@@ -116,6 +120,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         address newContractAddr = address(
             new WeddingContract(_fiances, _weddingDate)
         );
+        // save the address of the new contract in the registry
         for (uint32 i = 0; i < _fiances.length; i++) {
             fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
         }
@@ -127,7 +132,6 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     function issueWeddingCertificate(
         address[] memory _fiances
     ) external onlyDeployedContracts {
-        // TODO assert that none of the fiances has gotten married in the meantime
         require(noOneMarried(_fiances));
         _mint(msg.sender, totalSupply());
     }
