@@ -16,6 +16,7 @@ interface IWeddingContract {
     function divorce() external;
 }
 
+// this interface does NOT list all the functions of the contract, only the ones that are needed for enabling a basic functionality
 interface IWeddingRegistry is IERC721Enumerable {
     function isAuthority(address _address) external view returns (bool);
 
@@ -23,10 +24,6 @@ interface IWeddingRegistry is IERC721Enumerable {
         address[] memory _fiances,
         uint32 _weddingDate
     ) external returns (address);
-
-    function updateAuthorities(address[] memory _authorities) external;
-
-    // function getMyWeddingContractAddress() external view returns (address);
 
     function issueWeddingCertificate(address[] memory _fiances) external;
 

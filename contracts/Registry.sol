@@ -112,7 +112,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         require(_fiances.length > 1, "At least two fiances are required");
 
         require(
-            _weddingDate > (block.timestamp % 86400) + 86400,
+            _weddingDate - (_weddingDate % 86400) > block.timestamp,
             "Wedding date must be at least on the next day"
         );
 
