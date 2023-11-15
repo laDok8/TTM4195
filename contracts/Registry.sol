@@ -12,6 +12,8 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
     mapping(address => bool) internal deployedContracts; // for checking whether a calling address belongs to a deployed contract, using a hashmap for O(1) lookup instead of looping through an array
 
+    // TODO more events
+
     //// modifiers
     modifier onlyAuthorities() {
         require(
