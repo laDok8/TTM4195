@@ -10,8 +10,8 @@ contract WeddingContract is IWeddingContract {
     address[] internal fiances; // Store the fiances' addresses, set in constructor
 
     mapping(address => mapping(address => bool)) internal potentialGuests; // {guest_address : {fiance_address : true/false}} stores all proposed guests and their approvals by the fiances
-    address[] internal approvedGuests; // Store the approved guests' addresses
-    address[] internal votedAgainstWedding; // Store the addresses of the guests who voted against the wedding
+    address[] internal approvedGuests; // Store the approved guests' addresses TODO use mapping and counter for better efficiency
+    address[] internal votedAgainstWedding; // Store the addresses of the guests who voted against the wedding TODO use mapping and counter for better efficiency
 
     mapping(address => bool) internal fiancesConfirmations; // stores the fiances who confirmed the wedding
 
@@ -25,6 +25,7 @@ contract WeddingContract is IWeddingContract {
     event inviteSent(address invitee);
     // TODO more events
 
+    //// modifiers
     modifier onlyBeforeWeddingDay() {
         uint32 startOfDay = weddingDate - (weddingDate % 86400); // Convert to start of the day
         require(
@@ -68,6 +69,28 @@ contract WeddingContract is IWeddingContract {
         _;
     }
 
+    modifier onlyApprovedGuests() {
+        require(
+            isApprovedGuest(msg.sender),
+            "Only guests can call this function"
+        );
+        _;
+    }
+
+    modifier onlyGuestsWithVotingRight() {
+        require(
+            isApprovedGuest(msg.sender) && !hasVotedAgainstWedding(msg.sender),
+            "Only guests with voting right can call this function"
+        );
+        _;
+    }
+
+    modifier onlyNotCanceled() {
+        require(!isCanceled, "The wedding has been canceled");
+        _;
+    }
+
+    //// internal functions
     function isFiance(address _address) internal view returns (bool) {
         for (uint32 i = 0; i < fiances.length; i++) {
             if (fiances[i] == _address) {
@@ -77,14 +100,6 @@ contract WeddingContract is IWeddingContract {
         return false;
     }
 
-    modifier onlyApprovedGuests() {
-        require(
-            isApprovedGuest(msg.sender),
-            "Only guests can call this function"
-        );
-        _;
-    }
-
     function isApprovedGuest(address _address) internal view returns (bool) {
         for (uint32 i = 0; i < approvedGuests.length; i++) {
             if (approvedGuests[i] == _address) {
@@ -92,14 +107,6 @@ contract WeddingContract is IWeddingContract {
             }
         }
         return false;
-    }
-
-    modifier onlyGuestsWithVotingRight() {
-        require(
-            isApprovedGuest(msg.sender) && !hasVotedAgainstWedding(msg.sender),
-            "Only guests with voting right can call this function"
-        );
-        _;
     }
 
     function hasVotedAgainstWedding(
@@ -113,15 +120,7 @@ contract WeddingContract is IWeddingContract {
         return false;
     }
 
-    modifier onlyNotCanceled() {
-        require(!isCanceled, "The wedding has been canceled");
-        _;
-    }
-
-    function getFiances() external view returns (address[] memory) {
-        return fiances;
-    }
-
+    //// external functions
     constructor(address[] memory _fiances, uint32 _weddingDate) {
         wedReg = IWeddingRegistry(msg.sender);
 
@@ -129,6 +128,7 @@ contract WeddingContract is IWeddingContract {
         weddingDate = _weddingDate;
     }
 
+    //// internal functions
     function approveGuest(
         address _guest
     ) external onlyFiances onlyBeforeWeddingDay onlyNotCanceled {
@@ -203,7 +203,7 @@ contract WeddingContract is IWeddingContract {
         */
         // Mark the confirmation for the sender
         fiancesConfirmations[msg.sender] = true;
-        
+
         // Check if all fiances have confirmed
         bool allConfirmed = true;
         for (uint32 i = 0; i < fiances.length; i++) {
