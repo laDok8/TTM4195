@@ -102,3 +102,42 @@ class TestInitiateWedding:
                 chain.time() + 86400,
                 {"from": accounts[4]},
             )
+
+    def test_initiateWedding_callable_after_divorce(self):
+        pass
+
+
+class TestGetWeddingTokenId:
+    def test_getMyWeddingTokenId_only_callable_by_fiance(self):
+        pass
+
+    def test_getMyWeddingTokeId_not_callable_after_burn(self):
+        pass
+
+    def test_getMyWeddingTokenId_only_callable_after_issue(self):
+        pass
+
+    def test_getMyWeddingTokenId_returns_correct_token_id(self):
+        pass
+
+
+class TestGetWeddingContractAddress:
+    def test_getMyWeddingContractAddress_only_callable_by_fiance(self):
+        pass
+
+    def test_getMyWeddingContractAddress_not_callable_after_burn(self):
+        pass
+
+    def test_getMyWeddingContractAddress_only_callable_after_issue(self):
+        pass
+
+    def test_getMyWeddingContractAddress_returns_correct_address(self):
+        pass
+
+
+class TestDeployedContractModifiers:
+    def test_issueWeddingCertificate_only_callable_by_wedding_contract(self):
+        pass
+
+    def test_burnWeddingCertificate_only_callable_by_wedding_contract(self):
+        pass
