@@ -13,7 +13,7 @@ contract WeddingContract is IWeddingContract {
     address[] internal approvedGuests; // Store the approved guests' addresses
     address[] internal votedAgainstWedding; // Store the addresses of the guests who voted against the wedding
 
-    bool[] internal fiancesConfirmations; // stores the confirmations of the fiances for the wedding
+    mapping(address => bool) internal fiancesConfirmations; // stores the fiances who confirmed the wedding
 
     address internal fianceWhichWantsToBurn;
     bool internal authorityApprovedBurning = false;
@@ -127,8 +127,6 @@ contract WeddingContract is IWeddingContract {
 
         fiances = _fiances;
         weddingDate = _weddingDate;
-
-        fiancesConfirmations = new bool[](fiances.length); // by default, all fiances are set to false
     }
 
     function approveGuest(
@@ -204,22 +202,16 @@ contract WeddingContract is IWeddingContract {
         Can only be called by fiances and only on the wedding day after the voting period ended.
         */
         // Mark the confirmation for the sender
-        for (uint32 i = 0; i < fiances.length; i++) {
-            if (fiances[i] == msg.sender) {
-                fiancesConfirmations[i] = true;
-                break;
-            }
-        }
-
+        fiancesConfirmations[msg.sender] = true;
+        
         // Check if all fiances have confirmed
         bool allConfirmed = true;
-        for (uint32 i = 0; i < fiancesConfirmations.length; i++) {
-            if (!fiancesConfirmations[i]) {
+        for (uint32 i = 0; i < fiances.length; i++) {
+            if (!fiancesConfirmations[fiances[i]]) {
                 allConfirmed = false;
                 break;
             }
         }
-
         // issue an NFT if all fiances have confirmed
         if (allConfirmed) {
             wedReg.issueWeddingCertificate(fiances);
