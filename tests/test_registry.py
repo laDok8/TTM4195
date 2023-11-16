@@ -4,7 +4,10 @@ import brownie
 
 
 def create_registry_contract(authorities):
-    registry_contract = WeddingRegistry.deploy(authorities, {"from": authorities[0]})
+    wedding_implementation_contract = WeddingContract.deploy({"from": authorities[0]})
+    registry_contract = WeddingRegistry.deploy(
+        authorities, wedding_implementation_contract.address, {"from": authorities[0]}
+    )
     return registry_contract
 
 
