@@ -1,4 +1,4 @@
-from brownie import WeddingRegistry, accounts, chain, WeddingContract
+from brownie import WeddingRegistry, WeddingContract, accounts, chain
 
 
 def main():
@@ -6,7 +6,10 @@ def main():
     fiances = accounts[3:5]
     guests = accounts[5:9]
 
-    registry_contract = WeddingRegistry.deploy(authorities, {"from": authorities[0]})
+    wedding_implementation_contract = WeddingContract.deploy({"from": authorities[0]})
+    registry_contract = WeddingRegistry.deploy(
+        authorities, wedding_implementation_contract.address, {"from": authorities[0]}
+    )
 
     wedding_date = chain.time() + 86400
     wedding_contract_addr = registry_contract.initiateWedding(

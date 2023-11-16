@@ -122,7 +122,9 @@ contract WeddingContract is IWeddingContract {
     }
 
     //// constructor
+    // not needed anymore because of the proxy pattern --> moved to initialize function
 
+    //// external functions
     function initialize(
         address[] memory _fiances,
         uint32 _weddingDate
@@ -137,7 +139,6 @@ contract WeddingContract is IWeddingContract {
         weddingDate = _weddingDate;
     }
 
-    //// external functions
     function approveGuest(
         address _guest
     ) external onlyFiances onlyBeforeWeddingDay onlyNotCanceled {
