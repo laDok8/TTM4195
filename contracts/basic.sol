@@ -17,18 +17,6 @@ contract MyImplementation {
     }
 }
 
-// contract MyProxy is Proxy {
-//     address internal logic;
-
-//     constructor(address _logic) Proxy() {
-//         logic = _logic;
-//     }
-
-//     function _implementation() internal view override returns (address) {
-//         return logic;
-//     }
-// }
-
 contract MyProxy is ERC1967Proxy {
     constructor(address _logic) ERC1967Proxy(_logic, "") {}
 }
