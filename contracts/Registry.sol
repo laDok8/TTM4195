@@ -84,6 +84,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
 
     //// constructor
     constructor(address[] memory _authorities) ERC721("Wedding", "WED") {
+        require(_authorities.length > 0, "Authorities cannot be empty");
         authorities = _authorities;
     }
 

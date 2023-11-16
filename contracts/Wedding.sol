@@ -240,11 +240,13 @@ contract WeddingContract is IWeddingContract {
         // two different spouses want to burn
         if (isFiance(msg.sender) && (fianceWhichWantsToBurn != msg.sender)) {
             wedReg.burnWeddingCertificate();
+            isCanceled = true;
         }
 
         // a spouse wants to burn and some authority approved
         if (fianceWhichWantsToBurn != address(0) && authorityApprovedBurning) {
             wedReg.burnWeddingCertificate();
+            isCanceled = true;
         }
     }
 }
