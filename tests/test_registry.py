@@ -27,6 +27,11 @@ def add_succesfull_wedding(chain, registry_contract, fiances, wedding_date, gues
     return wedding_contract
 
 
+def divorce_wedding(wedding_contract, divorcers):
+    wedding_contract.divorce({"from": divorcers[0]})
+    wedding_contract.divorce({"from": divorcers[1]})
+
+
 class TestAuthority:
     def test_isAuthority(self, accounts):
         authorities = accounts[0:3]
@@ -103,22 +108,90 @@ class TestInitiateWedding:
                 {"from": accounts[4]},
             )
 
-    def test_initiateWedding_callable_after_divorce(self):
-        pass
+    def test_initiateWedding_callable_after_divorce(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:3])
+        wedding_contract = add_succesfull_wedding(
+            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+        )
+
+        chain.mine(timestamp=chain.time() + 86400)
+        wedding_contract.divorce({"from": accounts[4]})
+        wedding_contract.divorce({"from": accounts[5]})
+
+        registry_contract.initiateWedding(
+            [accounts[4], accounts[7]],
+            chain.time() + 86400,
+            {"from": accounts[4]},
+        )
 
 
 class TestGetWeddingTokenId:
-    def test_getMyWeddingTokenId_only_callable_by_fiance(self):
-        pass
+    def test_getMyWeddingTokenId_only_callable_by_fiance(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:3])
+        add_succesfull_wedding(
+            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+        )
 
-    def test_getMyWeddingTokeId_not_callable_after_burn(self):
-        pass
+        for acc in accounts:
+            if acc in accounts[4:6]:
+                assert registry_contract.getMyWeddingTokenId({"from": acc}) == 0
+            else:
+                with brownie.reverts("Only married accounts can call this function"):
+                    registry_contract.getMyWeddingTokenId({"from": acc})
 
-    def test_getMyWeddingTokenId_only_callable_after_issue(self):
-        pass
+    def test_getMyWeddingTokeId_not_callable_after_burn(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:3])
+        wedding_contract = add_succesfull_wedding(
+            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+        )
+        chain.mine(timestamp=chain.time() + 86400)
+        divorce_wedding(wedding_contract, accounts[4:6])
 
-    def test_getMyWeddingTokenId_returns_correct_token_id(self):
-        pass
+        with brownie.reverts("Only married accounts can call this function"):
+            registry_contract.getMyWeddingTokenId({"from": accounts[4]})
+
+    def test_getMyWeddingTokenId_only_callable_after_issue(self, chain, accounts):
+        authorities = accounts[0:3]
+        fiances = accounts[4:7]
+        guests = accounts[7:10]
+        wedding_date = chain.time() + 86400
+
+        registry_contract = create_registry_contract(accounts[0:3])
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        for fiance in fiances:
+            for guest in guests:
+                wedding_contract.approveGuest(guest, {"from": fiance})
+        ceremony_begin = (wedding_date // 86400) * 86400 + 36000
+        chain.mine(timestamp=ceremony_begin)
+
+        # only 2 of 3 fiances confirm the wedding
+        wedding_contract.confirmWedding({"from": fiances[0]})
+        wedding_contract.confirmWedding({"from": fiances[1]})
+
+        for acc in accounts:
+            with brownie.reverts("Only married accounts can call this function"):
+                registry_contract.getMyWeddingTokenId({"from": acc})
+
+    def test_getMyWeddingTokenId_returns_correct_token_id(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:3])
+
+        fiances_1 = accounts[4:6]
+        add_succesfull_wedding(
+            chain, registry_contract, fiances_1, chain.time() + 86400, []
+        )
+        for fi in fiances_1:
+            assert registry_contract.getMyWeddingTokenId({"from": fi}) == 0
+
+        fiances_2 = accounts[7:9]
+        add_succesfull_wedding(
+            chain, registry_contract, fiances_2, chain.time() + 86400, []
+        )
+        for fi in fiances_2:
+            assert registry_contract.getMyWeddingTokenId({"from": fi}) == 1
 
 
 class TestGetWeddingContractAddress:
