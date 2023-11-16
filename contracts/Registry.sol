@@ -126,8 +126,10 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         );
 
         // deploy a new wedding contract
-        WeddingContractProxy newWeddingProxy = new WeddingContractProxy(
-            weddingContractImplementationAddress
+        IWeddingContract newWeddingProxy = IWeddingContract(
+            address(
+                new WeddingContractProxy(weddingContractImplementationAddress)
+            )
         );
         newWeddingProxy.initialize(_fiances, _weddingDate);
         address newWeddingProxyAddress = address(newWeddingProxy);

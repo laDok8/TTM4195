@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import "./Interfaces.sol";
-import "@openzeppelin/contracts/proxy/Proxy.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract WeddingContract is IWeddingContract {
     IWeddingRegistry internal wedReg; // The wedding registry that approves and issues wedding certificates
@@ -261,14 +261,6 @@ contract WeddingContract is IWeddingContract {
     }
 }
 
-contract WeddingContractProxy is Proxy, WeddingContract {
-    address internal logic;
-
-    constructor(address _logic) {
-        logic = _logic;
-    }
-
-    function _implementation() internal view override returns (address) {
-        return logic;
-    }
+contract WeddingContractProxy is ERC1967Proxy {
+    constructor(address _logic) ERC1967Proxy(_logic, "") {}
 }
