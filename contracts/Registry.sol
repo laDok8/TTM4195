@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
 contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     address[] public authorities;
+    address internal weddingContractImplementationAddress;
 
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
     mapping(address => bool) internal deployedContracts; // for checking whether a calling address belongs to a deployed contract, using a hashmap for O(1) lookup instead of looping through an array
@@ -86,6 +87,8 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     constructor(address[] memory _authorities) ERC721("Wedding", "WED") {
         require(_authorities.length > 0, "Authorities cannot be empty");
         authorities = _authorities;
+
+        weddingContractImplementationAddress = address(new WeddingContract());
     }
 
     //// external functions
@@ -120,16 +123,20 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         );
 
         // deploy a new wedding contract
-        address newContractAddr = address(
-            new WeddingContract(_fiances, _weddingDate)
+        WeddingContractProxy newWeddingProxy = new WeddingContractProxy(
+            weddingContractImplementationAddress
         );
+        newWeddingProxy.initialize(_fiances, _weddingDate);
+        address newWeddingProxyAddress = address(newWeddingProxy);
         // save the address of the new contract in the registry
         for (uint32 i = 0; i < _fiances.length; i++) {
-            fianceAddressToWeddingContract[_fiances[i]] = newContractAddr;
+            fianceAddressToWeddingContract[
+                _fiances[i]
+            ] = newWeddingProxyAddress;
         }
-        deployedContracts[newContractAddr] = true;
+        deployedContracts[newWeddingProxyAddress] = true;
 
-        return newContractAddr;
+        return newWeddingProxyAddress;
     }
 
     function issueWeddingCertificate(

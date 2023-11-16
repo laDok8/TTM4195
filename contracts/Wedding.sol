@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import "./Interfaces.sol";
+import "@openzeppelin/contracts/proxy/Proxy.sol";
 
 contract WeddingContract is IWeddingContract {
     IWeddingRegistry internal wedReg; // The wedding registry that approves and issues wedding certificates
@@ -120,15 +121,23 @@ contract WeddingContract is IWeddingContract {
         return false;
     }
 
-    //// external functions
-    constructor(address[] memory _fiances, uint32 _weddingDate) {
+    //// constructor
+
+    function initialize(
+        address[] memory _fiances,
+        uint32 _weddingDate
+    ) external {
+        require(
+            address(wedReg) == address(0),
+            "Contract can only be initialized once"
+        );
         wedReg = IWeddingRegistry(msg.sender);
 
         fiances = _fiances;
         weddingDate = _weddingDate;
     }
 
-    //// internal functions
+    //// external functions
     function approveGuest(
         address _guest
     ) external onlyFiances onlyBeforeWeddingDay onlyNotCanceled {
@@ -248,5 +257,17 @@ contract WeddingContract is IWeddingContract {
             wedReg.burnWeddingCertificate();
             isCanceled = true;
         }
+    }
+}
+
+contract WeddingContractProxy is Proxy, WeddingContract {
+    address internal logic;
+
+    constructor(address _logic) {
+        logic = _logic;
+    }
+
+    function _implementation() internal view override returns (address) {
+        return logic;
     }
 }
