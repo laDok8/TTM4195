@@ -15,6 +15,12 @@ contract MyImplementation {
     function getValue() public view returns (uint256) {
         return value;
     }
+
+    function executeLoop(uint256 _times) public {
+        for (uint256 i = 0; i < _times; i++) {
+            value++;
+        }
+    }
 }
 
 contract MyProxy is ERC1967Proxy {
