@@ -27,7 +27,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     modifier onlyDeployedContracts() {
         require(
             deployedContracts[msg.sender],
-            "Only deployed contracts can call this function"
+            "Only deployed wedding contracts can call this function"
         );
         _;
     }
@@ -131,7 +131,10 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     function issueWeddingCertificate(
         address[] memory _fiances
     ) external onlyDeployedContracts {
-        require(noOneMarried(_fiances));
+        require(
+            noOneMarried(_fiances),
+            "One of the fiances is already married"
+        );
         _mint(msg.sender, totalSupply());
     }
 
