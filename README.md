@@ -5,7 +5,7 @@ This repository is structured as a brownie project.
 The `contracts` folder contains the smart contracts solidity code. 
 The `scripts` folder contains scripts used to deploy the smart contracts and showcase their functionality.
 The `tests` folder contains the tests for the smart contract.
-Even though we used a brownie project in order to allow for easier testing, the smart contracts in the `contracts` folder can be deployed and tested using remix as well.
+Even though we used a brownie project in order to allow for easier testing, the smart contracts in the `contracts` folder can be deployed and tested using `Remix` as well.
 
 ## Design Description
 Two distinct smart contracts are used in this project.
@@ -39,7 +39,7 @@ Using this Contract-factory pattern together with the `ERC1967Proxy` contract ha
 
 ## Brownie project setup
 In order to run the test suite and scripts, you need to set up this repository as a brownie project.
-To do so, you need to install brownie and `ganache-cli`.
+To do so, you need to install `brownie` and `ganache-cli`.
 Note that `brownie` requires python 3.9, so it is recommended to use a virtual conda environment for simply changing the python version.
 ```bash
 conda create -n wedding_env python=3.9
@@ -50,10 +50,11 @@ Then you install the required packages.
 pip install eth-brownie
 npm install -g ganache-cli
 ```
-Then, you need to clone this repository and cd into it.
+Then, you need to clone this repository and cd into it and install the OpenZeppelin contracts.
 ```bash
 git clone
 cd TTM4195
+npm install .
 ```
 Finally, you need to initialize the brownie project.
 ```bash
