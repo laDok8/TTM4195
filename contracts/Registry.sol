@@ -207,12 +207,26 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     }
 
     function burnWeddingCertificate() external onlyDeployedContracts {
+        /* Burns the wedding certificate of the calling wedding contract.
+        This function can only be called by a deployed wedding contract. This ensures that
+        the wedding was divorced in the correct way.
+        The association of address to wedding contract address will stay but the balance of the
+        wedding contract address will be 0. 
+        Also the isMarried function will return false for the fiances after this function was called
+        by the wedding contract.
+        */
         _burn(tokenOfOwnerByIndex(msg.sender, 0));
 
         emit WeddingCertificateBurned(msg.sender);
     }
 
     function getMyWeddingTokenId() external view onlyMarried returns (uint256) {
+        /*Once a person (or its adddress) got married, the address of the wedding contract
+        is associated with the address of the person and the wedding contract gets set as the owner
+        of the wedding token. This function returns the wedding token id of the wedding token
+        address of the calling address.
+        This function requires that the calling address is married. Otherwise it will raise an error.
+        */
         return
             tokenOfOwnerByIndex(fianceAddressToWeddingContract[msg.sender], 0);
     }

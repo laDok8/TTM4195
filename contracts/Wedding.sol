@@ -22,7 +22,7 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     bool internal isCanceled = false; // only needed to revert any function calls if the wedding is canceled (selfdestruct is not used)
 
-    uint16 public constant timeToVote = 36000; // 10 hours in seconds
+    uint16 public constant timeToVote = 36000; // 10 hours in seconds, time interval at the wedding day in which the guests can vote against the wedding
 
     event inviteSent(address invitee);
     event weddingConfirmed(address confirmedFiance);
@@ -32,6 +32,11 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     //// modifiers
     modifier onlyBeforeWeddingDay() {
+        /* The wedding day is considered as the day on which the wedding takes place.
+        The provided timestamp can be any timestamp on the wedding day.
+        For a timestamp to be before the wedding day, it must be smaller than the start of the wedding day.
+        Functions with this modifier can only be called before the wedding day.
+        */
         uint32 startOfDay = weddingDate - (weddingDate % 86400); // Convert to start of the day
         require(
             block.timestamp < startOfDay,
@@ -41,6 +46,10 @@ contract WeddingContract is IWeddingContract, Initializable {
     }
 
     modifier onlyOnWeddingDayAfterVoting() {
+        /* There is a predefined time interval on the wedding day in which the guests can vote against the wedding.
+        After this time interval, the fiances can confirm the wedding.
+        Functions with this modifier can only be called on the wedding day after the voting period ended.
+        */
         uint32 startOfDay = weddingDate - (weddingDate % 86400); // Convert to start of the day
         require(
             block.timestamp >= startOfDay + timeToVote &&
@@ -51,6 +60,11 @@ contract WeddingContract is IWeddingContract, Initializable {
     }
 
     modifier onlyAfterWeddingDay() {
+        /* The wedding day is considered as the day on which the wedding takes place.
+        The provided timestamp can be any timestamp on the wedding day.
+        For a timestamp to be after the wedding day, it must be greater than the end of the wedding day.
+        Functions with this modifier can only be called after the wedding day.
+        */
         uint32 startOfDay = weddingDate - (weddingDate % 86400); // Convert to start of the day
         require(
             block.timestamp >= startOfDay + 86400,
@@ -60,6 +74,10 @@ contract WeddingContract is IWeddingContract, Initializable {
     }
 
     modifier onlyOnWeddingDayBeforeVotingEnd() {
+        /* There is a predefined time interval on the wedding day in which the guests can vote against the wedding.
+        After this time interval, the fiances can confirm the wedding.
+        Functions with this modifier can only be called on the wedding day before the voting period ends.
+        */
         uint32 startOfDay = weddingDate - (weddingDate % 86400); // Convert to start of the day
         require(
             block.timestamp >= startOfDay &&
@@ -75,6 +93,7 @@ contract WeddingContract is IWeddingContract, Initializable {
     }
 
     modifier onlyApprovedGuests() {
+        /* Only guests which are approved by all fiances can call functions with this modifier. */
         require(
             approvedGuests[msg.sender],
             "Only guests can call this function"
@@ -83,6 +102,8 @@ contract WeddingContract is IWeddingContract, Initializable {
     }
 
     modifier onlyGuestsWithVotingRight() {
+        /* Only guests which are approved by all fiances and did not vote against the 
+        wedding already can call functions with this modifier. */
         require(
             approvedGuests[msg.sender] && !votedAgainstWedding[msg.sender],
             "Only guests with voting right can call this function"
@@ -91,6 +112,11 @@ contract WeddingContract is IWeddingContract, Initializable {
     }
 
     modifier onlyNotCanceled() {
+        /* A wedding can be canceled by one of the fiances before the wedding day.
+        A wedding can be canceled by the guests if more than half of the guests vote against the wedding.
+        A wedding is also considered as canceled if the wedding got divorced.
+        Functions with this modifier can only be called if the wedding is not canceled.
+        */
         require(!isCanceled, "The wedding has been canceled");
         _;
     }
@@ -108,6 +134,11 @@ contract WeddingContract is IWeddingContract, Initializable {
     function hasDuplicates(
         address[] memory array
     ) internal pure returns (bool) {
+        /* Checks if an array contains duplicates. 
+        This uses a basic O(n^2) algorithm.
+        Since this function is only used once to check the fiances in the constructor and
+        it can be assumed that the number of fiances is small, this is not a problem.
+        */
         for (uint256 i = 0; i < array.length; i++) {
             for (uint256 j = 0; j < i; j++) {
                 if (array[i] == array[j]) {
@@ -127,6 +158,10 @@ contract WeddingContract is IWeddingContract, Initializable {
         address[] memory _fiances,
         uint32 _weddingDate
     ) external initializer {
+        /* Initializes the contract with the provided fiances and wedding date.
+        Replaces the constructor because of the proxy pattern.
+        The initializer modifier ensures that this function can only be called once.
+        */
         require(!hasDuplicates(_fiances), "Duplicate fiance addresses");
 
         require(_fiances.length > 1, "At least two fiances are required");
@@ -148,6 +183,8 @@ contract WeddingContract is IWeddingContract, Initializable {
         /* Adds a guest to the address-appovals-mapping of potential guests and marks the approval of the sender.
         If the passed address is already a potential guest, the approval of the sender is marked.
         If the guest is approved by all fiances, the guest is added to the list of approved guests and an event is emitted.
+        If a guest is already approved by the caller, nothing happens.
+        Can only be called by fiances and only before the wedding day and only if the wedding is not canceled.
         */
 
         // preven that a guest is added to the list of approved guests more than once
@@ -183,8 +220,9 @@ contract WeddingContract is IWeddingContract, Initializable {
         onlyBeforeWeddingDay
         onlyNotCanceled
     {
-        /* Destroyes the contract and sends the funds back to the creator.
-        This can only be done before the wedding day and only by one of the fiances.
+        /* Allows the fiances to revoke the engagement before the wedding day.
+        Can only be called by fiances and only before the wedding day and only if the wedding is not canceled.
+        Emits an event and cancels the wedding.
         */
         isCanceled = true;
 
@@ -197,8 +235,9 @@ contract WeddingContract is IWeddingContract, Initializable {
         onlyGuestsWithVotingRight
         onlyNotCanceled
     {
-        /* Votes against the wedding. If more than half of the guests vote against the wedding, the contract is destroyed.
+        /* Votes against the wedding. If more than half of the guests vote against the wedding, the wedding is canceled.
         Can only be called by approved guests and only on the wedding day before the voting period ends.
+        Can onyl be called once per guest.
         */
 
         // add the sender to the list of guests who voted against the wedding
@@ -219,8 +258,11 @@ contract WeddingContract is IWeddingContract, Initializable {
         onlyOnWeddingDayAfterVoting
         onlyNotCanceled
     {
-        /* Confirms the wedding. If all fiances confirm the wedding, the contract mints a token and sets the tokenURI to "xxx".
+        /* Confirms the wedding. If all fiances confirm the wedding the registry is called 
+        to issue a wedding certificate.
         Can only be called by fiances and only on the wedding day after the voting period ended.
+        If the confirmation is not done by all fiances, this contract remains but no token 
+        gets minted so the fiances are not considered as married.
         */
         // Mark the confirmation for the sender
         fiancesConfirmations[msg.sender] = true;
@@ -234,17 +276,18 @@ contract WeddingContract is IWeddingContract, Initializable {
                 break;
             }
         }
-        // issue an NFT if all fiances have confirmed
+
+        // If all fiances have confirmed, issue a wedding certificate from the registry
         if (allConfirmed) {
             wedReg.issueWeddingCertificate(fiances);
         }
     }
 
     function divorce() external onlyAfterWeddingDay onlyNotCanceled {
-        /* Attempt to burn the marriage. If one of the fiances calls this function, the fianceWhichWantsToBurn is set to the sender.
-        If an authority calls this function, the authorityApprovedBurning is set to true.
-        If two different fiances want to burn, the marriage is burned or one fiance and an authority want to burn, the marriage is burned.
-        Can only be called after the wedding day.
+        /* Attempt to burn the marriage. Can only be called by fiances or authorities.
+        Can only be called after the wedding day and only if the wedding is not canceled.
+        To burn either 2 fiances or 1 fiance and 1 authority must call this function.
+        The registry is called to burn the wedding certificate and mark the fiances as divorced.
         */
         bool isFiance_ = isFiance(msg.sender);
         bool isAuthority_ = wedReg.isAuthority(msg.sender);
