@@ -1,6 +1,12 @@
 import pytest
-from brownie import WeddingRegistry, WeddingContract
 import brownie
+
+from fixtures import (
+    create_registry_contract,
+    add_succesfull_wedding,
+    add_pending_wedding,
+    divorce_wedding,
+)
 
 
 class TestApproveGuests:
