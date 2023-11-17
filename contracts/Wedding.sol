@@ -13,7 +13,8 @@ contract WeddingContract is IWeddingContract, Initializable {
     mapping(address => mapping(address => bool)) internal potentialGuests; // {guest_address : {fiance_address : true/false}} stores all proposed guests and their approvals by the fiances
     mapping(address => bool) internal approvedGuests; // Store the approved guests' addresses
     uint16 internal approvedGuestsCounter = 0; // Counter for the approved guest --> we can have max 2**16 guests
-    address[] internal votedAgainstWedding; // Store the addresses of the guests who voted against the wedding TODO use mapping and counter for better efficiency
+    mapping(address => bool) internal votedAgainstWedding; // Store the addresses of the guests who voted against the wedding
+    uint16 internal votedAgainstWeddingCounter = 0; // Counter for the guests who voted against the wedding
 
     mapping(address => bool) internal fiancesConfirmations; // stores the fiances who confirmed the wedding
 
@@ -81,7 +82,7 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     modifier onlyGuestsWithVotingRight() {
         require(
-            approvedGuests[msg.sender] && !hasVotedAgainstWedding(msg.sender),
+            approvedGuests[msg.sender] && !votedAgainstWedding[msg.sender],
             "Only guests with voting right can call this function"
         );
         _;
@@ -96,17 +97,6 @@ contract WeddingContract is IWeddingContract, Initializable {
     function isFiance(address _address) internal view returns (bool) {
         for (uint32 i = 0; i < fiances.length; i++) {
             if (fiances[i] == _address) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function hasVotedAgainstWedding(
-        address _address
-    ) internal view returns (bool) {
-        for (uint32 i = 0; i < votedAgainstWedding.length; i++) {
-            if (votedAgainstWedding[i] == _address) {
                 return true;
             }
         }
@@ -194,7 +184,6 @@ contract WeddingContract is IWeddingContract, Initializable {
         /* Destroyes the contract and sends the funds back to the creator.
         This can only be done before the wedding day and only by one of the fiances.
         */
-        // selfdestruct(payable(address(wedReg)));
         isCanceled = true;
     }
 
@@ -209,11 +198,11 @@ contract WeddingContract is IWeddingContract, Initializable {
         */
 
         // add the sender to the list of guests who voted against the wedding
-        votedAgainstWedding.push(msg.sender);
+        votedAgainstWedding[msg.sender] = true;
+        votedAgainstWeddingCounter++;
 
         // cancel the wedding if more than half of the guests voted against it
-        if (votedAgainstWedding.length * 2 > approvedGuestsCounter) {
-            // selfdestruct(payable(address(wedReg)));
+        if (votedAgainstWeddingCounter > approvedGuestsCounter) {
             isCanceled = true;
         }
     }
