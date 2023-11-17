@@ -22,6 +22,9 @@ class TestRevokeEngagement:
     def test_revoke_only_callable_once(self):
         pass
 
+    def test_event_sent_after_revoke(self):
+        pass
+
 
 class TestApproveGuests:
     def test_onyl_callable_by_fiances(self):
@@ -45,7 +48,7 @@ class TestApproveGuests:
     def test_guest_can_only_be_approved_once(self):
         pass
 
-    def test_invitation_evet_sent_after_final_approve(self):
+    def test_invitation_event_sent_after_final_approve(self):
         pass
 
 
@@ -63,6 +66,12 @@ class TestVoteAgainstWedding:
         pass
 
     def test_no_approved_guests(self):
+        pass
+
+    def test_event_sent_after_vote(self):
+        pass
+
+    def test_event_sent_after_cancel(self):
         pass
 
     @pytest.mark.parametrize("m, n", [(0, 0), (0, 1), (1, 3), (2, 3), (3, 3)])
@@ -89,6 +98,12 @@ class TestConfirmWedding:
     def test_no_certificate_issued_if_not_all_fiances_confirmed(self):
         pass
 
+    def test_event_emitted_after_each_confirm(self):
+        pass
+
+    def test_event_emitted_after_final_confirm(self):
+        pass
+
 
 class TestDivorce:
     def test_only_callable_after_wedding_day(self):
@@ -113,4 +128,10 @@ class TestDivorce:
         pass
 
     def test_initiate_wedding_possible_after_divorce(self):
+        pass
+
+    def test_event_emitted_after_divorce_initiated(self):
+        pass
+
+    def test_event_emitted_after_successful_divorce(self):
         pass

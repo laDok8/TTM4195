@@ -25,7 +25,10 @@ contract WeddingContract is IWeddingContract, Initializable {
     uint16 public constant timeToVote = 36000; // 10 hours in seconds
 
     event inviteSent(address invitee);
-    // TODO more events
+    event weddingConfirmed(address confirmedFiance);
+    event weddingCanceled(address canceler);
+    event divorceInitiated(address initiator);
+    event voteAgainstWeddingOccured(address voter);
 
     //// modifiers
     modifier onlyBeforeWeddingDay() {
@@ -184,6 +187,8 @@ contract WeddingContract is IWeddingContract, Initializable {
         This can only be done before the wedding day and only by one of the fiances.
         */
         isCanceled = true;
+
+        emit weddingCanceled(msg.sender);
     }
 
     function voteAgainstWedding()
@@ -199,10 +204,12 @@ contract WeddingContract is IWeddingContract, Initializable {
         // add the sender to the list of guests who voted against the wedding
         votedAgainstWedding[msg.sender] = true;
         votedAgainstWeddingCounter++;
+        emit voteAgainstWeddingOccured(msg.sender);
 
         // cancel the wedding if more than half of the guests voted against it
         if (votedAgainstWeddingCounter > approvedGuestsCounter) {
             isCanceled = true;
+            emit weddingCanceled(msg.sender);
         }
     }
 
@@ -217,6 +224,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         */
         // Mark the confirmation for the sender
         fiancesConfirmations[msg.sender] = true;
+        emit weddingConfirmed(msg.sender);
 
         // Check if all fiances have confirmed
         bool allConfirmed = true;
@@ -229,7 +237,6 @@ contract WeddingContract is IWeddingContract, Initializable {
         // issue an NFT if all fiances have confirmed
         if (allConfirmed) {
             wedReg.issueWeddingCertificate(fiances);
-            // TODO emit event
         }
     }
 
@@ -255,6 +262,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         // if no one has approved/initiated a divorce yet, set the sender as the divorce initiator
         if (divorceInitiator == address(0)) {
             divorceInitiator = msg.sender;
+            emit divorceInitiated(msg.sender);
             return;
         }
 

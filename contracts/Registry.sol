@@ -13,7 +13,15 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
     mapping(address => bool) internal deployedContracts; // for checking whether a calling address belongs to a deployed contract, using a hashmap for O(1) lookup instead of looping through an array
 
-    // TODO more events
+    //// events
+    event AuthoritiesUpdated(address[] authorities);
+    event WeddingInitiated(
+        address weddingContractAddress,
+        address[] fiances,
+        uint32 weddingDate
+    );
+    event WeddingCertificateIssued(address[] fiances);
+    event WeddingCertificateBurned(address weddingContractAddress);
 
     //// modifiers
     modifier onlyAuthorities() {
@@ -90,6 +98,8 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     ) external onlyAuthorities {
         require(_authorities.length > 0, "Authorities cannot be empty");
         authorities = _authorities;
+
+        emit AuthoritiesUpdated(_authorities);
     }
 
     function initiateWedding(
@@ -125,6 +135,8 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         }
         deployedContracts[newWeddingProxyAddress] = true;
 
+        emit WeddingInitiated(newWeddingProxyAddress, _fiances, _weddingDate);
+
         return newWeddingProxyAddress;
     }
 
@@ -136,10 +148,14 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
             "One of the fiances is already married"
         );
         _mint(msg.sender, totalSupply());
+
+        emit WeddingCertificateIssued(_fiances);
     }
 
     function burnWeddingCertificate() external onlyDeployedContracts {
         _burn(tokenOfOwnerByIndex(msg.sender, 0));
+
+        emit WeddingCertificateBurned(msg.sender);
     }
 
     function getMyWeddingTokenId() external view onlyMarried returns (uint256) {

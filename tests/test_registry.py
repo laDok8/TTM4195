@@ -44,6 +44,9 @@ class TestAuthority:
         for acc in new_authorities:
             assert registry_contract.isAuthority(acc) == (acc in new_authorities)
 
+    def test_event_emitted_on_updateAuthorities(self, accounts):
+        pass
+
 
 class TestInitiateWedding:
     def test_initiateWedding_no_duplicates(self, chain, accounts):
@@ -100,6 +103,9 @@ class TestInitiateWedding:
             chain.time() + 86400,
             {"from": accounts[4]},
         )
+
+    def test_event_emitted_on_initiateWedding(self, chain, accounts):
+        pass
 
 
 class TestGetWeddingTokenId:
