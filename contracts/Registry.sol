@@ -60,7 +60,12 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
 
     function isMarried(address _address) internal view returns (bool) {
         /* Whether someone is married is determined by whether there is a wedding contract 
-        address associated with the address and the balance of the wedding contract address is > 0 */
+        address associated with the address and the balance of the wedding contract address is > 0.
+        A wedding contract address is associated with an address by calling issueWeddingCertificate
+        after a successful wedding procedure.
+        However, if a wedding contract is canceled, the address of the canceled contract will still be
+        associated with the fiances. This is not a problem as the balance of the canceled contract will be 0.
+        */
 
         // ERC21 raises an error if the address is the zero address
         if (fianceAddressToWeddingContract[_address] == address(0)) {
@@ -175,11 +180,23 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     function issueWeddingCertificate(
         address[] memory _fiances
     ) external onlyDeployedContracts {
+        /* Issues a wedding certificate to the fiances.
+        This function can only be called by a deployed wedding contract. This ensures that
+        the ceremony has been executed successfully and was not canceled.
+        Issuing a wedding certificate means that the registry will mint a new token and
+        associate the token with the wedding contract address.
+        The wedding contract address gets associated with the fiances by calling this function.
+        The wedding contract address of a married person as well as the wedding token of
+        this contract address can be retrieved by calling getMyWeddingContractAddress and
+        getMyWeddingTokenId.
+        */
         require(
             noOneMarried(_fiances),
             "One of the fiances is already married"
         );
 
+        // associate the wedding contract address with the fiances
+        // if a fianec got divorced earlier, the address of the canceled contract will be overwritten
         for (uint32 i = 0; i < _fiances.length; i++) {
             fianceAddressToWeddingContract[_fiances[i]] = msg.sender;
         }
@@ -206,6 +223,15 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         onlyMarried
         returns (address)
     {
+        /*Once a person (or its adddress) got married, the address of the wedding contract
+        is associated with the address of the person. This function returns the address of the
+        wedding contract of the calling address.
+        Even if a weddding got divorced this function will return the address of the canceled
+        wedding contract. However the balance of the wedding contract will be 0 and the 
+        isCanceled flag of the wedding contract will be true.
+        If a divorced person marries again, the address of the new wedding contract will be
+        associated with the address of the person.
+        */
         return fianceAddressToWeddingContract[msg.sender];
     }
 }
