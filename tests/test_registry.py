@@ -108,6 +108,17 @@ class TestInitiateWedding:
         pass
 
 
+class TestParallelWeddingScenarios:
+    def test_parallel_weddings(self):
+        pass
+
+    def test_parallel_weddings_with_divorce(self):
+        pass
+
+    def test_parallel_wedding_with_same_fiances(self):
+        pass
+
+
 class TestGetWeddingTokenId:
     def test_getMyWeddingTokenId_only_callable_by_fiance(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])

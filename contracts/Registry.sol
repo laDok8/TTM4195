@@ -59,6 +59,9 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     }
 
     function isMarried(address _address) internal view returns (bool) {
+        /* Whether someone is married is determined by whether there is a wedding contract 
+        address associated with the address and the balance of the wedding contract address is > 0 */
+
         // ERC21 raises an error if the address is the zero address
         if (fianceAddressToWeddingContract[_address] == address(0)) {
             return false;
@@ -82,6 +85,13 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         address[] memory _authorities,
         address _weddingContractImplementationAddress
     ) ERC721("Wedding", "WED") {
+        /* Initialize the authorities and the wedding contract implementation address.
+        The wedding contract implementation address is the address of the contract that 
+        will implement the logic of a wedding procedure. For each wedding a new proxy contract
+        will be deployed that will delegate all calls to the implementation contract.
+        The list of authorities must be non-empty.
+        */
+
         require(_authorities.length > 0, "Authorities cannot be empty");
         authorities = _authorities;
 
@@ -96,16 +106,42 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     function updateAuthorities(
         address[] memory _authorities
     ) external onlyAuthorities {
+        /* Updates the list of authorities. The list of authorities must be non-empty. 
+        Can only be called by an authority. Emit an event when the authorities are updated.
+        */
         require(_authorities.length > 0, "Authorities cannot be empty");
         authorities = _authorities;
 
         emit AuthoritiesUpdated(_authorities);
     }
 
+    function changeWeddingContractImplementationAddress(
+        address _weddingContractImplementationAddress
+    ) external onlyAuthorities {
+        /* Changes the address of the wedding contract implementation.
+        This allows for upgrading the wedding contract implementation without having to 
+        deploy a new registry. In case the rules for a wedding change, a new implementation
+        contract can be deployed and the address can be updated here.
+        Can only be called by an authority.
+        */
+        weddingContractImplementationAddress = _weddingContractImplementationAddress;
+    }
+
     function initiateWedding(
         address[] memory _fiances,
         uint32 _weddingDate
     ) external returns (address) {
+        /* Initiates a wedding by deploying a new wedding contract proxy.
+        The wedding contract proxy will delegate all calls to the wedding contract implementation
+        but maintains its own storage.
+        By using a proxy contract, the deployment of a new wedding contract is gas efficient
+        as we only need to deploy a new proxy contract and not the whole implementation.
+        The wedding contract proxy is initialized with the addresses of the fiances and the wedding date.
+        The list of fiances must be non-empty and there must be no duplicate addresses.
+        The wedding date must be in the future.
+        This requirements are checked by the wedding contract implementation.
+        */
+
         // ceck that all fiances are not married by calling the registry
         require(
             noOneMarried(_fiances),
@@ -127,12 +163,8 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         );
         address newWeddingProxyAddress = address(newWeddingProxy);
 
-        // save the address of the new contract in the registry
-        for (uint32 i = 0; i < _fiances.length; i++) {
-            fianceAddressToWeddingContract[
-                _fiances[i]
-            ] = newWeddingProxyAddress;
-        }
+        // save the address of the new contract in the registry so we can check wether the
+        // registry gets called by a wedding contract which was deployed by the registry
         deployedContracts[newWeddingProxyAddress] = true;
 
         emit WeddingInitiated(newWeddingProxyAddress, _fiances, _weddingDate);
@@ -147,6 +179,11 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
             noOneMarried(_fiances),
             "One of the fiances is already married"
         );
+
+        for (uint32 i = 0; i < _fiances.length; i++) {
+            fianceAddressToWeddingContract[_fiances[i]] = msg.sender;
+        }
+
         _mint(msg.sender, totalSupply());
 
         emit WeddingCertificateIssued(_fiances);
