@@ -11,7 +11,8 @@ contract WeddingContract is IWeddingContract, Initializable {
     address[] internal fiances; // Store the fiances' addresses, set in constructor
 
     mapping(address => mapping(address => bool)) internal potentialGuests; // {guest_address : {fiance_address : true/false}} stores all proposed guests and their approvals by the fiances
-    address[] internal approvedGuests; // Store the approved guests' addresses TODO use mapping and counter for better efficiency
+    mapping(address => bool) internal approvedGuests; // Store the approved guests' addresses
+    uint16 internal approvedGuestsCounter = 0; // Counter for the approved guest --> we can have max 2**16 guests
     address[] internal votedAgainstWedding; // Store the addresses of the guests who voted against the wedding TODO use mapping and counter for better efficiency
 
     mapping(address => bool) internal fiancesConfirmations; // stores the fiances who confirmed the wedding
@@ -72,7 +73,7 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     modifier onlyApprovedGuests() {
         require(
-            isApprovedGuest(msg.sender),
+            approvedGuests[msg.sender],
             "Only guests can call this function"
         );
         _;
@@ -80,7 +81,7 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     modifier onlyGuestsWithVotingRight() {
         require(
-            isApprovedGuest(msg.sender) && !hasVotedAgainstWedding(msg.sender),
+            approvedGuests[msg.sender] && !hasVotedAgainstWedding(msg.sender),
             "Only guests with voting right can call this function"
         );
         _;
@@ -95,15 +96,6 @@ contract WeddingContract is IWeddingContract, Initializable {
     function isFiance(address _address) internal view returns (bool) {
         for (uint32 i = 0; i < fiances.length; i++) {
             if (fiances[i] == _address) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function isApprovedGuest(address _address) internal view returns (bool) {
-        for (uint32 i = 0; i < approvedGuests.length; i++) {
-            if (approvedGuests[i] == _address) {
                 return true;
             }
         }
@@ -167,7 +159,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         */
 
         // preven that a guest is added to the list of approved guests more than once
-        require(!isApprovedGuest(_guest), "Guest is already approved");
+        require(!approvedGuests[_guest], "Guest is already approved");
 
         // Mark the approval
         potentialGuests[_guest][msg.sender] = true;
@@ -183,7 +175,12 @@ contract WeddingContract is IWeddingContract, Initializable {
 
         // If all fiances have approved, emit an event and consider the guest approved
         if (guestApprovedByAllFiances) {
-            approvedGuests.push(_guest);
+            approvedGuests[_guest] = true;
+            require(
+                type(uint16).max > approvedGuestsCounter,
+                "Maximum number of guests reached"
+            );
+            approvedGuestsCounter++;
             emit inviteSent(_guest);
         }
     }
@@ -215,7 +212,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         votedAgainstWedding.push(msg.sender);
 
         // cancel the wedding if more than half of the guests voted against it
-        if (votedAgainstWedding.length >= approvedGuests.length / 2) {
+        if (votedAgainstWedding.length * 2 > approvedGuestsCounter) {
             // selfdestruct(payable(address(wedReg)));
             isCanceled = true;
         }
