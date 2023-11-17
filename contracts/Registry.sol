@@ -12,6 +12,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
 
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
     mapping(address => bool) internal deployedContracts; // for checking whether a calling address belongs to a deployed contract, using a hashmap for O(1) lookup instead of looping through an array
+    mapping(uint256 => string) internal tokenURIs; // for storing the tokenURI of a wedding token
 
     //// events
     event AuthoritiesUpdated(address[] authorities);
@@ -104,6 +105,15 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     }
 
     //// external functions
+    function tokenURI(
+        uint256 _tokenId
+    ) public view override returns (string memory) {
+        /* Returns the token URI of the wedding token with the given token id.
+        This URI can be used to retrieve the any kind of metadata of the wedding token.
+        */
+        return tokenURIs[_tokenId];
+    }
+
     function isAuthority(address _address) external view returns (bool) {
         return _isAuthority(_address);
     }
@@ -201,7 +211,12 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
             fianceAddressToWeddingContract[_fiances[i]] = msg.sender;
         }
 
-        _mint(msg.sender, totalSupply());
+        uint256 tokenId = totalSupply();
+        _mint(msg.sender, tokenId);
+        // since the task description does not specify what data should be stored in the token, we just added this dummy data to show that we know how to do it
+        tokenURIs[
+            tokenId
+        ] = "Here we can add arbitrary data to the token. For example a link to some off chain data.";
 
         emit WeddingCertificateIssued(_fiances);
     }
