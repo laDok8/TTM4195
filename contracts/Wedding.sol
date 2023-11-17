@@ -121,6 +121,20 @@ contract WeddingContract is IWeddingContract, Initializable {
         return false;
     }
 
+    function hasDuplicates(
+        address[] memory array
+    ) internal pure returns (bool) {
+        for (uint256 i = 0; i < array.length; i++) {
+            for (uint256 j = 0; j < i; j++) {
+                if (array[i] == array[j]) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     //// constructor
     // not needed anymore because of the proxy pattern --> moved to initialize function
 
@@ -129,10 +143,15 @@ contract WeddingContract is IWeddingContract, Initializable {
         address[] memory _fiances,
         uint32 _weddingDate
     ) external initializer {
+        require(!hasDuplicates(_fiances), "Duplicate fiance addresses");
+
+        require(_fiances.length > 1, "At least two fiances are required");
+
         require(
-            address(wedReg) == address(0),
-            "Contract can only be initialized once"
+            _weddingDate - (_weddingDate % 86400) > block.timestamp,
+            "Wedding date must be at least on the next day"
         );
+
         wedReg = IWeddingRegistry(msg.sender);
 
         fiances = _fiances;

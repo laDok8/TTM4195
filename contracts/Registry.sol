@@ -69,20 +69,6 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         return true;
     }
 
-    function hasDuplicates(
-        address[] memory array
-    ) internal pure returns (bool) {
-        for (uint256 i = 0; i < array.length; i++) {
-            for (uint256 j = 0; j < i; j++) {
-                if (array[i] == array[j]) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     //// constructor
     constructor(
         address[] memory _authorities,
@@ -114,15 +100,6 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         require(
             noOneMarried(_fiances),
             "One of the fiances is already married"
-        );
-
-        require(!hasDuplicates(_fiances), "Duplicate fiance addresses");
-
-        require(_fiances.length > 1, "At least two fiances are required");
-
-        require(
-            _weddingDate - (_weddingDate % 86400) > block.timestamp,
-            "Wedding date must be at least on the next day"
         );
 
         // deploy a new wedding contract proxy (and directly call initialize)
