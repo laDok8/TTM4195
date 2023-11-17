@@ -18,8 +18,7 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     mapping(address => bool) internal fiancesConfirmations; // stores the fiances who confirmed the wedding
 
-    address internal fianceWhichWantsToBurn;
-    bool internal authorityApprovedBurning = false;
+    address internal divorceInitiator; // stores the address of the fiance who initiated the divorce
 
     bool internal isCanceled = false; // only needed to revert any function calls if the wedding is canceled (selfdestruct is not used)
 
@@ -239,29 +238,37 @@ contract WeddingContract is IWeddingContract, Initializable {
         If an authority calls this function, the authorityApprovedBurning is set to true.
         If two different fiances want to burn, the marriage is burned or one fiance and an authority want to burn, the marriage is burned.
         Can only be called after the wedding day.
-        If someone else than a fiance or an authority calls this function, nothing happens.
-        (No special modifier was used for this to reduce computational complexity)
         */
-        // the "first" fiance to call this function will be set as the fianceWhichWantsToBurn
-        if (isFiance(msg.sender) && (fianceWhichWantsToBurn == address(0))) {
-            fianceWhichWantsToBurn = msg.sender;
+        bool isFiance_ = isFiance(msg.sender);
+        bool isAuthority_ = wedReg.isAuthority(msg.sender);
+
+        require(
+            isFiance_ || isAuthority_,
+            "Only fiances or authorities can call this function"
+        );
+
+        require(
+            msg.sender != divorceInitiator,
+            "You already initiated or approved divorce"
+        );
+
+        // if no one has approved/initiated a divorce yet, set the sender as the divorce initiator
+        if (divorceInitiator == address(0)) {
+            divorceInitiator = msg.sender;
+            return;
         }
 
-        // an authority can approve the burning, so a single spouse can burn with the authority approval
-        if (wedReg.isAuthority(msg.sender)) {
-            authorityApprovedBurning = true;
+        // everything from here is onyl executed if there is already a divorce initiator
+        // if the sender is an authority make sure that the divorce initiator is a fiance
+        if (isAuthority_) {
+            require(
+                isFiance(divorceInitiator),
+                "Authority already initiated divorce"
+            );
         }
 
-        // two different spouses want to burn
-        if (isFiance(msg.sender) && (fianceWhichWantsToBurn != msg.sender)) {
-            wedReg.burnWeddingCertificate();
-            isCanceled = true;
-        }
-
-        // a spouse wants to burn and some authority approved
-        if (fianceWhichWantsToBurn != address(0) && authorityApprovedBurning) {
-            wedReg.burnWeddingCertificate();
-            isCanceled = true;
-        }
+        // either 2 fiances or 1 fiance and 1 authority want to burn the marriage
+        wedReg.burnWeddingCertificate();
+        isCanceled = true;
     }
 }
