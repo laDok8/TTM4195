@@ -3,8 +3,8 @@
 pragma solidity ^0.8.20;
 
 import "./Interfaces.sol";
-import "./Wedding.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     address[] public authorities;
@@ -125,14 +125,21 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
             "Wedding date must be at least on the next day"
         );
 
-        // deploy a new wedding contract
-        IWeddingContract newWeddingProxy = IWeddingContract(
-            address(
-                new WeddingContractProxy(weddingContractImplementationAddress)
-            )
+        // deploy a new wedding contract proxy (and directly call initialize)
+        bytes memory initParams = abi.encodeWithSignature(
+            "initialize(address[],uint32)",
+            _fiances,
+            _weddingDate
         );
-        newWeddingProxy.initialize(_fiances, _weddingDate);
+        ERC1967Proxy newWeddingProxy_ = new ERC1967Proxy(
+            weddingContractImplementationAddress,
+            initParams
+        );
+        IWeddingContract newWeddingProxy = IWeddingContract(
+            address(newWeddingProxy_)
+        );
         address newWeddingProxyAddress = address(newWeddingProxy);
+
         // save the address of the new contract in the registry
         for (uint32 i = 0; i < _fiances.length; i++) {
             fianceAddressToWeddingContract[

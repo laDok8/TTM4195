@@ -3,9 +3,9 @@
 pragma solidity ^0.8.20;
 
 import "./Interfaces.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-contract WeddingContract is IWeddingContract {
+contract WeddingContract is IWeddingContract, Initializable {
     IWeddingRegistry internal wedReg; // The wedding registry that approves and issues wedding certificates
     uint32 internal weddingDate; // Considered as unix time, can be any timestamp but for the calculation the start of the day will be inferred, set in constructor
     address[] internal fiances; // Store the fiances' addresses, set in constructor
@@ -128,7 +128,7 @@ contract WeddingContract is IWeddingContract {
     function initialize(
         address[] memory _fiances,
         uint32 _weddingDate
-    ) external {
+    ) external initializer {
         require(
             address(wedReg) == address(0),
             "Contract can only be initialized once"
@@ -259,8 +259,4 @@ contract WeddingContract is IWeddingContract {
             isCanceled = true;
         }
     }
-}
-
-contract WeddingContractProxy is ERC1967Proxy {
-    constructor(address _logic) ERC1967Proxy(_logic, "") {}
 }
