@@ -96,3 +96,21 @@ class TestDivorce:
 
     def test_only_callable_if_not_cancelled(self):
         pass
+
+    def test_only_callable_by_fiances_or_authorities(self):
+        pass
+
+    def test_divorce_by_2_spouses(self):
+        pass
+
+    def test_divorce_by_1_spouse_and_1_authority(self):
+        pass
+
+    def test_divorce_fails_if_2_authorities(self):
+        pass
+
+    def test_divorce_can_only_be_called_once_per_fiance(self):
+        pass
+
+    def test_initiate_wedding_possible_after_divorce(self):
+        pass
