@@ -105,11 +105,37 @@ class TestInitiateWedding:
         )
 
     def test_event_emitted_on_initiateWedding(self, chain, accounts):
-        pass
+        registry_contract = create_registry_contract(accounts[0:3])
+
+        wedding_date = chain.time() + 86400
+        tx = registry_contract.initiateWedding(
+            accounts[4:6], wedding_date, {"from": accounts[4]}
+        )
+        emmitted_event = tx.events["WeddingInitiated"]
+        assert emmitted_event["fiances"] == accounts[4:6]
+        assert emmitted_event["weddingDate"] == wedding_date
+        assert emmitted_event["weddingContractAddress"] == tx.return_value
 
 
 class TestParallelWeddingScenarios:
-    def test_parallel_weddings(self):
+    def test_parallel_weddings_with_distinct_fiances(self, chain, accounts):
+        wedding_registry_contract = create_registry_contract(accounts[0:3])
+        # add_pending_wedding( TODO
+        #     chain, wedding_registry_contract, accounts[4:6], chain.time() + 86400, []
+        # )
+        # wedding_contract_2 = add_pending_wedding(
+        #     chain, wedding_registry_contract, accounts[7:9], chain.time() + 86400, []
+        # )
+        # wedding_contract_2.confirmWedding({"from": accounts[8]})
+        # wedding_contract_2.confirmWedding({"from": accounts[9]})
+
+        # for acc in accounts[4:6]:
+        #     with brownie.reverts("Only married accounts can call this function"):
+        #         wedding_registry_contract.getMyWeddingTokenId({"from": acc})
+
+    def test_parallel_weddings_same_fiances_slower_confirm_is_invalid(
+        self, chain, accounts
+    ):
         pass
 
     def test_parallel_weddings_with_divorce(self):
