@@ -38,7 +38,6 @@ class TestRevokeEngagement:
         with brownie.reverts("The wedding has been canceled"):
             wedding_contract.approveGuest(guests[0], {"from": fiances[0]})
 
-
     def test_revoke_only_callable_before_wedding(self, chain, accounts):
         # Test setup
         authorities = accounts[0:2]
@@ -251,3 +250,7 @@ class TestDivorce:
 
     def test_event_emitted_after_successful_divorce(self):
         pass
+
+
+class TestGetMyPartners:
+    pass

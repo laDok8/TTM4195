@@ -322,4 +322,17 @@ contract WeddingContract is IWeddingContract, Initializable {
         wedReg.burnWeddingCertificate();
         isCanceled = true;
     }
+
+    function getMyPartnerAddresses()
+        external
+        view
+        onlyFiances
+        returns (address[] memory)
+    {
+        /* Returns the addresses of the partners of the caller. 
+        Can only be called by fiances.
+        Only a convenience function for the end user.
+        */
+        return fiances;
+    }
 }
