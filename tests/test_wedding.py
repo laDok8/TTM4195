@@ -1,6 +1,9 @@
 import pytest
 import brownie
 
+from brownie import WeddingRegistry, WeddingContract
+
+
 from fixtures import (
     create_registry_contract,
     add_succesfull_wedding,
@@ -10,20 +13,133 @@ from fixtures import (
 
 
 class TestRevokeEngagement:
-    def test_no_functions_callable_after_revoke(self):
-        pass
+    def test_no_functions_callable_after_revoke(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
 
-    def test_revoke_only_callable_before_wedding(self):
-        pass
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
 
-    def test_revoke_only_callable_by_fiances(self):
-        pass
+        for fiance in fiances:
+            for guest in guests:
+                wedding_contract.approveGuest(guest, {"from": fiance})
 
-    def test_revoke_only_callable_once(self):
-        pass
+        # one fiance revokes the wedding directly after it was initiated
+        wedding_contract.revokeEngagement({"from": fiances[0]})
 
-    def test_event_sent_after_revoke(self):
-        pass
+        # The wedding got revoked by fiances[0], check that no functions from the wedding contract are callable anymore
+        with brownie.reverts("The wedding has been canceled"):
+            wedding_contract.approveGuest(guests[0], {"from": fiances[0]})
+
+
+    def test_revoke_only_callable_before_wedding(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        for fiance in fiances:
+            for guest in guests:
+                wedding_contract.approveGuest(guest, {"from": fiance})
+
+        # timetravel to wedding day
+        chain.mine(timestamp=wedding_date)
+
+        # the wedding should not be revokable anymore, because it's already the wedding day
+        with brownie.reverts("Action can only be performed before the wedding day"):
+            wedding_contract.revokeEngagement({"from": fiances[0]})
+
+    def test_revoke_only_callable_by_fiances(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        for fiance in fiances:
+            for guest in guests:
+                wedding_contract.approveGuest(guest, {"from": fiance})
+
+        # the wedding should only be revokable by fiances
+        with brownie.reverts("Only fiances can call this function"):
+            wedding_contract.revokeEngagement({"from": authorities[0]})
+        with brownie.reverts("Only fiances can call this function"):
+            wedding_contract.revokeEngagement({"from": guests[0]})
+        with brownie.reverts("Only fiances can call this function"):
+            wedding_contract.revokeEngagement({"from": unknowns[0]})
+
+    def test_revoke_only_callable_once(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        for fiance in fiances:
+            for guest in guests:
+                wedding_contract.approveGuest(guest, {"from": fiance})
+
+        # one fiance revokes the wedding directly after it was initiated
+        wedding_contract.revokeEngagement({"from": fiances[0]})
+
+        # the revoke function should not be callable a second time
+        with brownie.reverts("The wedding has been canceled"):
+            wedding_contract.revokeEngagement({"from": fiances[0]})
+        with brownie.reverts("The wedding has been canceled"):
+            wedding_contract.revokeEngagement({"from": fiances[1]})
+
+    def test_event_sent_after_revoke(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        for fiance in fiances:
+            for guest in guests:
+                wedding_contract.approveGuest(guest, {"from": fiance})
+
+        # one fiance revokes the wedding directly after it was initiated
+        tx = wedding_contract.revokeEngagement({"from": fiances[0]})
+
+        # a wedding event should've been emitted
+        assert "weddingCanceled" in tx.events
 
 
 class TestApproveGuests:
