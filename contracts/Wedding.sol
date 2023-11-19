@@ -22,9 +22,8 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     bool internal isCanceled = false; // only needed to revert any function calls if the wedding is canceled (selfdestruct is not used)
 
-    uint32 public constant durationOfWedding = 86400; // 24 hours in seconds, time interval of the duration of the wedding
-
     uint16 public constant timeToVote = 36000; // 10 hours in seconds, time interval at the wedding day in which the guests can vote against the wedding
+    uint24 public constant dayInSeconds = 86400; // 24 hours in seconds, used to convert timestamps to start of the day
 
     event inviteSent(address invitee);
     event weddingConfirmed(address confirmedFiance);
@@ -39,7 +38,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         For a timestamp to be before the wedding day, it must be smaller than the start of the wedding day.
         Functions with this modifier can only be called before the wedding day.
         */
-        uint32 startOfDay = weddingDate - (weddingDate % durationOfWedding); // Convert to start of the day
+        uint32 startOfDay = weddingDate - (weddingDate % dayInSeconds); // Convert to start of the day
         require(
             block.timestamp < startOfDay,
             "Action can only be performed before the wedding day"
@@ -52,10 +51,10 @@ contract WeddingContract is IWeddingContract, Initializable {
         After this time interval, the fiances can confirm the wedding.
         Functions with this modifier can only be called on the wedding day after the voting period ended.
         */
-        uint32 startOfDay = weddingDate - (weddingDate % durationOfWedding); // Convert to start of the day
+        uint32 startOfDay = weddingDate - (weddingDate % dayInSeconds); // Convert to start of the day
         require(
             block.timestamp >= startOfDay + timeToVote &&
-                block.timestamp < startOfDay + durationOfWedding,
+                block.timestamp < startOfDay + dayInSeconds,
             "Action can only be performed during the wedding day after the voting happened"
         );
         _;
@@ -67,9 +66,9 @@ contract WeddingContract is IWeddingContract, Initializable {
         For a timestamp to be after the wedding day, it must be greater than the end of the wedding day.
         Functions with this modifier can only be called after the wedding day.
         */
-        uint32 startOfDay = weddingDate - (weddingDate % durationOfWedding); // Convert to start of the day
+        uint32 startOfDay = weddingDate - (weddingDate % dayInSeconds); // Convert to start of the day
         require(
-            block.timestamp >= startOfDay + durationOfWedding,
+            block.timestamp >= startOfDay + dayInSeconds,
             "Action can only be performed after the wedding day"
         );
         _;
@@ -80,7 +79,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         After this time interval, the fiances can confirm the wedding.
         Functions with this modifier can only be called on the wedding day before the voting period ends.
         */
-        uint32 startOfDay = weddingDate - (weddingDate % durationOfWedding); // Convert to start of the day
+        uint32 startOfDay = weddingDate - (weddingDate % dayInSeconds); // Convert to start of the day
         require(
             block.timestamp >= startOfDay &&
                 block.timestamp < startOfDay + timeToVote,
@@ -161,7 +160,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         require(_fiances.length > 1, "At least two fiances are required");
 
         require(
-            _weddingDate - (_weddingDate % durationOfWedding) > block.timestamp,
+            _weddingDate - (_weddingDate % dayInSeconds) > block.timestamp,
             "Wedding date must be at least on the next day"
         );
 
@@ -181,7 +180,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         Can only be called by fiances and only before the wedding day and only if the wedding is not canceled.
         */
 
-        // preven that a guest is added to the list of approved guests more than once
+        // prevent that a guest is added to the list of approved guests more than once
         require(!approvedGuests[_guest], "Guest is already approved");
 
         // Mark the approval
