@@ -241,7 +241,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         emit voteAgainstWeddingOccured(msg.sender);
 
         // cancel the wedding if more than half of the guests voted against it
-        if (votedAgainstWeddingCounter > approvedGuestsCounter) {
+        if (votedAgainstWeddingCounter*2 > approvedGuestsCounter) {
             isCanceled = true;
             emit weddingCanceled(msg.sender);
         }
