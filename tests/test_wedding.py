@@ -253,4 +253,56 @@ class TestDivorce:
 
 
 class TestGetMyPartners:
-    pass
+    def test_getMyPartners_only_callable_by_fiances(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:2])
+        wedding_contract = add_succesfull_wedding(
+            chain, registry_contract, accounts[2:6], chain.time() + 86400, []
+        )
+
+        for acc in accounts:
+            if acc in accounts[2:6]:
+                assert (
+                    wedding_contract.getMyPartnersAddresses({"from": acc})
+                    == accounts[2:6]
+                )
+            else:
+                with brownie.reverts("Only fiances can call this function"):
+                    wedding_contract.getMyPartnersAddresses({"from": acc})
+
+    def test_getMyPartners_not_callable_after_divorce(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:2])
+        wedding_contract = add_succesfull_wedding(
+            chain, registry_contract, accounts[2:6], chain.time() + 86400, []
+        )
+
+        chain.mine(timestamp=chain.time() + 86400)
+        divorce_wedding(wedding_contract, accounts[2:4])
+
+        for acc in accounts[2:4]:
+            with brownie.reverts("The wedding has been canceled"):
+                wedding_contract.getMyPartnersAddresses({"from": acc})
+
+    def test_getMyPartners_not_callable_after_revoke(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:2])
+        wedding_contract = WeddingContract.at(
+            registry_contract.initiateWedding(
+                accounts[2:6], chain.time() + 86400, {"from": accounts[2]}
+            ).return_value
+        )
+
+        wedding_contract.revokeEngagement({"from": accounts[2]})
+
+        for acc in accounts[2:6]:
+            with brownie.reverts("The wedding has been canceled"):
+                wedding_contract.getMyPartnersAddresses({"from": acc})
+
+    def test_correct_list_of_partners_returned(self, chain, accounts):
+        registry_contract = create_registry_contract(accounts[0:2])
+        wedding_contract = add_succesfull_wedding(
+            chain, registry_contract, accounts[2:6], chain.time() + 86400, []
+        )
+
+        for acc in accounts[2:6]:
+            assert (
+                wedding_contract.getMyPartnersAddresses({"from": acc}) == accounts[2:6]
+            )
