@@ -12,6 +12,7 @@ from fixtures import (
 
 DAY_IN_SECONDS = 86400
 
+
 class TestAuthority:
     def test_isAuthority(self, accounts):
         authorities = accounts[0:3]
@@ -427,34 +428,34 @@ class TestDeployedContractModifiers:
         registry_contract.burnWeddingCertificate({"from": wedding_contract})
 
 
-class TestTokenURI:
-    def test_tokenURI_retreival(self, chain, accounts):
-        registry_contract = create_registry_contract(accounts[0:3])
-        wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
-        )
+# class TestTokenURI:
+#     def test_tokenURI_retreival(self, chain, accounts):
+#         registry_contract = create_registry_contract(accounts[0:3])
+#         wedding_contract = add_succesfull_wedding(
+#             chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
+#         )
 
-        token_id = registry_contract.getMyWeddingTokenId({"from": accounts[4]})
-        assert (
-            registry_contract.tokenURI(token_id, {"from": accounts[4]})
-            == "Here we can add arbitrary data to the token. For example a link to some off chain data."
-        )
+#         token_id = registry_contract.getMyWeddingTokenId({"from": accounts[4]})
+#         assert (
+#             registry_contract.tokenURI(token_id, {"from": accounts[4]})
+#             == "Here we can add arbitrary data to the token. For example a link to some off chain data."
+#         )
 
-    def test_tokenURI_onyl_callable_by_corresponding_fiances(self, chain, accounts):
-        registry_contract = create_registry_contract(accounts[0:3])
-        wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
-        )
+#     def test_tokenURI_onyl_callable_by_corresponding_fiances(self, chain, accounts):
+#         registry_contract = create_registry_contract(accounts[0:3])
+#         wedding_contract = add_succesfull_wedding(
+#             chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
+#         )
 
-        token_id = registry_contract.getMyWeddingTokenId({"from": accounts[4]})
-        for acc in accounts:
-            if acc in accounts[4:6]:
-                assert (
-                    registry_contract.tokenURI(token_id, {"from": acc})
-                    == "Here we can add arbitrary data to the token. For example a link to some off chain data."
-                )
-            else:
-                with brownie.reverts(
-                    "Only fiances of the wedding contract can call this function"
-                ):
-                    registry_contract.tokenURI(token_id, {"from": acc})
+#         token_id = registry_contract.getMyWeddingTokenId({"from": accounts[4]})
+#         for acc in accounts:
+#             if acc in accounts[4:6]:
+#                 assert (
+#                     registry_contract.tokenURI(token_id, {"from": acc})
+#                     == "Here we can add arbitrary data to the token. For example a link to some off chain data."
+#                 )
+#             else:
+#                 with brownie.reverts(
+#                     "Only fiances of the wedding contract can call this function"
+#                 ):
+#                     registry_contract.tokenURI(token_id, {"from": acc})

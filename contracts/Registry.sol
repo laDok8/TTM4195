@@ -106,19 +106,19 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
     }
 
     //// external functions
-    function tokenURI(
-        uint256 _tokenId
-    ) public view override returns (string memory) {
-        /* Returns the token URI of the wedding token with the given token id.
-        This URI can be used to retrieve any kind of metadata of the wedding token.
-        Can only be called by someone who is associated with the wedding contract that owns the token.
-        */
-        require(
-            ownerOf(_tokenId) == fianceAddressToWeddingContract[msg.sender],
-            "Only fiances of the wedding contract can call this function"
-        );
-        return tokenURIs[_tokenId];
-    }
+    // function tokenURI(
+    //     uint256 _tokenId
+    // ) public view override returns (string memory) {
+    //     /* Returns the token URI of the wedding token with the given token id.
+    //     This URI can be used to retrieve any kind of metadata of the wedding token.
+    //     Can only be called by someone who is associated with the wedding contract that owns the token.
+    //     */
+    //     require(
+    //         ownerOf(_tokenId) == fianceAddressToWeddingContract[msg.sender],
+    //         "Only fiances of the wedding contract can call this function"
+    //     );
+    //     return tokenURIs[_tokenId];
+    // }
 
     function isAuthority(address _address) external view returns (bool) {
         return _isAuthority(_address);
@@ -220,9 +220,9 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         _mint(msg.sender, weddingCounter);
         // since the task description does not specify what data should be stored in the token, we just added this dummy data to show that we know how to do it
         // The data like the wedding date and the fiances is stored in the wedding contract already so theres no need to store it here again
-        tokenURIs[
-            weddingCounter
-        ] = "Here we can add arbitrary data to the token. For example a link to some off chain data.";
+        // tokenURIs[
+        //     weddingCounter
+        // ] = "Here we can add arbitrary data to the token. For example a link to some off chain data.";
         weddingCounter++;
 
         emit WeddingCertificateIssued(_fiances);
