@@ -94,7 +94,6 @@ contract WeddingContract is IWeddingContract, Initializable {
         _;
     }
 
-
     modifier onlyGuestsWithVotingRight() {
         /* Only guests which are approved by all fiances and did not vote against the 
         wedding already can call functions with this modifier. */
@@ -241,7 +240,7 @@ contract WeddingContract is IWeddingContract, Initializable {
         emit voteAgainstWeddingOccured(msg.sender);
 
         // cancel the wedding if more than half of the guests voted against it
-        if (votedAgainstWeddingCounter*2 > approvedGuestsCounter) {
+        if (votedAgainstWeddingCounter * 2 > approvedGuestsCounter) {
             isCanceled = true;
             emit weddingCanceled(msg.sender);
         }
@@ -327,6 +326,7 @@ contract WeddingContract is IWeddingContract, Initializable {
     {
         /* Returns the addresses of the partners of the caller. 
         Can only be called by fiances.
+        Even if the fiances are not married yet, this function returns the addresses of the partners.
         Only a convenience function for the end user.
         */
         return fiances;
