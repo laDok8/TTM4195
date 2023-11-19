@@ -299,3 +299,7 @@ class TestDeployedContractModifiers:
                 registry_contract.burnWeddingCertificate({"from": acc})
 
         registry_contract.burnWeddingCertificate({"from": wedding_contract})
+
+
+class TestTokenURI:
+    pass

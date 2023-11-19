@@ -109,8 +109,13 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         uint256 _tokenId
     ) public view override returns (string memory) {
         /* Returns the token URI of the wedding token with the given token id.
-        This URI can be used to retrieve the any kind of metadata of the wedding token.
+        This URI can be used to retrieve any kind of metadata of the wedding token.
+        Can only be called by someone who is associated with the wedding contract that owns the token.
         */
+        require(
+            ownerOf(_tokenId) == fianceAddressToWeddingContract[msg.sender],
+            "Only fiances of the wedding contract can call this function"
+        );
         return tokenURIs[_tokenId];
     }
 
@@ -214,6 +219,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
         uint256 tokenId = totalSupply();
         _mint(msg.sender, tokenId);
         // since the task description does not specify what data should be stored in the token, we just added this dummy data to show that we know how to do it
+        // The data like the wedding date and the fiances is stored in the wedding contract already so theres no need to store it here again
         tokenURIs[
             tokenId
         ] = "Here we can add arbitrary data to the token. For example a link to some off chain data.";
