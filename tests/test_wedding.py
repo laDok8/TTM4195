@@ -15,6 +15,7 @@ from fixtures import (
 DAY_IN_SECONDS = 86400
 START_TO_VOTE_SECONDS = 36000
 
+
 class TestRevokeEngagement:
     def test_no_functions_callable_after_revoke(self, chain, accounts):
         # Test setup
@@ -214,7 +215,7 @@ class TestApproveGuests:
         guests = accounts[5:9]
         unknowns = accounts[9:]
         wedding_date = chain.time() + DAY_IN_SECONDS
-        start_of_wedding_day = wedding_date - (wedding_date % DAY_IN_SECONDS);
+        start_of_wedding_day = wedding_date - (wedding_date % DAY_IN_SECONDS)
 
         registry_contract = create_registry_contract(authorities)
         wedding_contract_addr = registry_contract.initiateWedding(
@@ -240,7 +241,7 @@ class TestApproveGuests:
         guests = accounts[5:9]
         unknowns = accounts[9:]
         wedding_date = chain.time() + DAY_IN_SECONDS
-        start_of_wedding_day = wedding_date - (wedding_date % DAY_IN_SECONDS);
+        start_of_wedding_day = wedding_date - (wedding_date % DAY_IN_SECONDS)
 
         registry_contract = create_registry_contract(authorities)
         wedding_contract_addr = registry_contract.initiateWedding(
@@ -266,14 +267,13 @@ class TestApproveGuests:
         guests = accounts[5:9]
         unknowns = accounts[9:]
         wedding_date = chain.time() + DAY_IN_SECONDS
-        start_of_wedding_day = wedding_date - (wedding_date % DAY_IN_SECONDS);
+        start_of_wedding_day = wedding_date - (wedding_date % DAY_IN_SECONDS)
 
         registry_contract = create_registry_contract(authorities)
         wedding_contract_addr = registry_contract.initiateWedding(
             fiances, wedding_date, {"from": fiances[0]}
         ).return_value
         wedding_contract = WeddingContract.at(wedding_contract_addr)
-
 
         for fiance in fiances:
             for guest in guests:
@@ -289,7 +289,7 @@ class TestApproveGuests:
         guests = accounts[5:9]
         unknowns = accounts[9:]
         wedding_date = chain.time() + DAY_IN_SECONDS
-        start_of_wedding_day = wedding_date - (wedding_date % DAY_IN_SECONDS);
+        start_of_wedding_day = wedding_date - (wedding_date % DAY_IN_SECONDS)
 
         registry_contract = create_registry_contract(authorities)
         wedding_contract_addr = registry_contract.initiateWedding(
@@ -306,16 +306,17 @@ class TestApproveGuests:
 
 
 class TestVoteAgainstWedding:
-
     @pytest.mark.skip
     def create_generic_wedding_no_guests(self, chain, accounts, num_guests=6):
         registry_contract = create_registry_contract(accounts[0:2])
         fiances = accounts[2:4]
-        guests = accounts[4:4+num_guests]
+        guests = accounts[4 : 4 + num_guests]
 
         start_of_day = (chain.time() // DAY_IN_SECONDS) * DAY_IN_SECONDS
-        wedding_date = start_of_day + 3 *DAY_IN_SECONDS # start of 3rd day
-        wedding_contract = add_pending_wedding_non_approved_guests(chain, registry_contract, fiances, wedding_date, guests)
+        wedding_date = start_of_day + 3 * DAY_IN_SECONDS  # start of 3rd day
+        wedding_contract = add_pending_wedding_non_approved_guests(
+            chain, registry_contract, fiances, wedding_date, guests
+        )
 
         before_wedding_date = wedding_date - DAY_IN_SECONDS
         chain.mine(timestamp=before_wedding_date)
@@ -323,43 +324,63 @@ class TestVoteAgainstWedding:
 
     @pytest.mark.skip
     def create_generic_wedding(self, chain, accounts, num_guests=6):
-        fiances, guests, wedding_contract, wedding_date = self.create_generic_wedding_no_guests(chain, accounts, num_guests)
+        (
+            fiances,
+            guests,
+            wedding_contract,
+            wedding_date,
+        ) = self.create_generic_wedding_no_guests(chain, accounts, num_guests)
         for g in guests:
             wedding_contract.approveGuest(g, {"from": fiances[0]})
             wedding_contract.approveGuest(g, {"from": fiances[1]})
         return fiances, guests, wedding_contract, wedding_date
 
-
-
-    #this nondeterministic test fails sometimes
+    # this nondeterministic test fails sometimes
     def test_only_callable_on_wedding_day_before_deadline(self, chain, accounts):
-        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(chain, accounts)
+        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(
+            chain, accounts
+        )
 
-        with brownie.reverts("Action can only be performed within the first 10 hours of the wedding day"):
+        with brownie.reverts(
+            "Action can only be performed within the first 10 hours of the wedding day"
+        ):
             wedding_contract.voteAgainstWedding({"from": guests[0]})
-        chain.mine(timestamp=wedding_date-1)
-        with brownie.reverts("Action can only be performed within the first 10 hours of the wedding day"):
+        chain.mine(timestamp=wedding_date - 1)
+        with brownie.reverts(
+            "Action can only be performed within the first 10 hours of the wedding day"
+        ):
             wedding_contract.voteAgainstWedding({"from": guests[0]})
         chain.mine(timestamp=wedding_date)
         wedding_contract.voteAgainstWedding({"from": guests[1]})
-        chain.mine(timestamp=wedding_date+START_TO_VOTE_SECONDS-1)
+        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS - 1)
         wedding_contract.voteAgainstWedding({"from": guests[2]})
         chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS)
-        with brownie.reverts("Action can only be performed within the first 10 hours of the wedding day"):
+        with brownie.reverts(
+            "Action can only be performed within the first 10 hours of the wedding day"
+        ):
             wedding_contract.voteAgainstWedding({"from": guests[0]})
 
     def test_only_callable_by_guest(self, chain, accounts):
-        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(chain, accounts)
+        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(
+            chain, accounts
+        )
 
         chain.mine(timestamp=wedding_date)
         non_approved_guest = [guest for guest in accounts[:12] if guest not in guests]
 
         for no_guest in non_approved_guest:
-            with brownie.reverts("Only guests with voting right can call this function"):
+            with brownie.reverts(
+                "Only guests with voting right can call this function"
+            ):
                 wedding_contract.voteAgainstWedding({"from": no_guest})
 
     def test_only_callable_by_approved_guest(self, chain, accounts):
-        fiances, guests, wedding_contract, wedding_date = self.create_generic_wedding_no_guests(chain, accounts)
+        (
+            fiances,
+            guests,
+            wedding_contract,
+            wedding_date,
+        ) = self.create_generic_wedding_no_guests(chain, accounts)
 
         # approve guests by 1st fiance
         for g in guests:
@@ -368,7 +389,9 @@ class TestVoteAgainstWedding:
         chain.mine(timestamp=wedding_date)
 
         for g in guests:
-            with brownie.reverts("Only guests with voting right can call this function"):
+            with brownie.reverts(
+                "Only guests with voting right can call this function"
+            ):
                 wedding_contract.voteAgainstWedding({"from": g})
 
         chain.mine(timestamp=wedding_date - 2)
@@ -381,51 +404,72 @@ class TestVoteAgainstWedding:
         wedding_contract.voteAgainstWedding({"from": guests[0]})
 
     def test_only_callable_once_per_guest(self, chain, accounts):
-        fiances, guests, wedding_contract, wedding_date = self.create_generic_wedding(chain, accounts)
+        fiances, guests, wedding_contract, wedding_date = self.create_generic_wedding(
+            chain, accounts
+        )
         chain.mine(timestamp=wedding_date)
 
         # vote
-        for g in guests[:len(guests)//2 -1]:
+        for g in guests[: len(guests) // 2 - 1]:
             print(len(fiances))
             wedding_contract.voteAgainstWedding({"from": g})
-            with brownie.reverts("Only guests with voting right can call this function"):
+            with brownie.reverts(
+                "Only guests with voting right can call this function"
+            ):
                 wedding_contract.voteAgainstWedding({"from": g})
 
     def test_only_callable_if_not_cancelled(self, chain, accounts):
-        fiances, guests, wedding_contract, wedding_date = self.create_generic_wedding(chain, accounts)
+        fiances, guests, wedding_contract, wedding_date = self.create_generic_wedding(
+            chain, accounts
+        )
 
         # cancel
         wedding_contract.revokeEngagement({"from": fiances[0]})
-        with brownie.reverts("Action can only be performed within the first 10 hours of the wedding day"):
+        with brownie.reverts(
+            "Action can only be performed within the first 10 hours of the wedding day"
+        ):
             wedding_contract.voteAgainstWedding({"from": guests[0]})
         chain.mine(timestamp=wedding_date)
         with brownie.reverts("The wedding has been canceled"):
             wedding_contract.voteAgainstWedding({"from": guests[0]})
 
     def test_no_approved_guests(self, chain, accounts):
-        _, guests, wedding_contract, wedding_date = self.create_generic_wedding_no_guests(chain, accounts)
+        (
+            _,
+            guests,
+            wedding_contract,
+            wedding_date,
+        ) = self.create_generic_wedding_no_guests(chain, accounts)
         chain.mine(timestamp=wedding_date)
         for g in guests:
-            with brownie.reverts("Only guests with voting right can call this function"):
+            with brownie.reverts(
+                "Only guests with voting right can call this function"
+            ):
                 wedding_contract.voteAgainstWedding({"from": g})
 
     def test_event_sent_after_vote(self, chain, accounts):
-        fiances, guests, wedding_contract, wedding_date = self.create_generic_wedding(chain, accounts)
+        fiances, guests, wedding_contract, wedding_date = self.create_generic_wedding(
+            chain, accounts
+        )
         chain.mine(timestamp=wedding_date)
         tx = wedding_contract.voteAgainstWedding({"from": guests[0]})
         assert len(tx.events) == 1
 
     def test_event_sent_after_majority_vote(self, chain, accounts):
-        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(chain, accounts)
+        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(
+            chain, accounts
+        )
         chain.mine(timestamp=wedding_date)
-        for g in guests[:len(guests)//2]:
+        for g in guests[: len(guests) // 2]:
             wedding_contract.voteAgainstWedding({"from": g})
-        tx = wedding_contract.voteAgainstWedding({"from": guests[len(guests)//2]})
+        tx = wedding_contract.voteAgainstWedding({"from": guests[len(guests) // 2]})
         assert len(tx.events) == 2
 
     @pytest.mark.parametrize("m, n", [(0, 0), (0, 1), (1, 3), (2, 3), (3, 3)])
-    def test_n_out_of_m_guests_voted_against(self, chain, accounts , m, n):
-        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(chain, accounts, num_guests= n)
+    def test_n_out_of_m_guests_voted_against(self, chain, accounts, m, n):
+        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(
+            chain, accounts, num_guests=n
+        )
         chain.mine(timestamp=wedding_date)
         for idx, g in enumerate(guests[:m]):
             if idx * 2 > m:
@@ -436,22 +480,25 @@ class TestVoteAgainstWedding:
 
 
 class TestConfirmWedding:
-
     @pytest.mark.skip
     def create_generic_wedding(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:2])
         fiances = accounts[2:4]
 
         start_of_day = (chain.time() // DAY_IN_SECONDS) * DAY_IN_SECONDS
-        wedding_date = start_of_day + 3 *DAY_IN_SECONDS # start of 3rd day
-        wedding_contract = add_pending_wedding_non_approved_guests(chain, registry_contract, fiances, wedding_date, [])
+        wedding_date = start_of_day + 3 * DAY_IN_SECONDS  # start of 3rd day
+        wedding_contract = add_pending_wedding_non_approved_guests(
+            chain, registry_contract, fiances, wedding_date, []
+        )
 
         before_wedding_date = wedding_date - DAY_IN_SECONDS
         chain.mine(timestamp=before_wedding_date)
         return fiances, wedding_contract, wedding_date, registry_contract
 
     def test_only_callable_by_fiances(self, chain, accounts):
-        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(chain, accounts)
+        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(
+            chain, accounts
+        )
         non_fiance = [acc for acc in accounts[:12] if acc not in fiances]
         chain.mine(timestamp=wedding_date)
         for acc in non_fiance:
@@ -459,36 +506,54 @@ class TestConfirmWedding:
                 wedding_contract.confirmWedding({"from": acc})
 
     def test_only_callable_on_wedding_day_after_voting_deadline(self, chain, accounts):
-        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(chain, accounts)
+        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(
+            chain, accounts
+        )
         chain.mine(timestamp=wedding_date)
-        with brownie.reverts("Action can only be performed during the wedding day after the voting happened"):
+        with brownie.reverts(
+            "Action can only be performed during the wedding day after the voting happened"
+        ):
             wedding_contract.confirmWedding({"from": fiances[0]})
-        chain.mine(timestamp=wedding_date  + START_TO_VOTE_SECONDS)
+        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS)
         wedding_contract.confirmWedding({"from": fiances[0]})
 
     def test_only_callable_if_not_cancelled(self, chain, accounts):
-        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(chain, accounts)
+        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(
+            chain, accounts
+        )
         wedding_contract.revokeEngagement({"from": fiances[0]})
-        chain.mine(timestamp=wedding_date+START_TO_VOTE_SECONDS)
+        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS)
         with brownie.reverts("The wedding has been canceled"):
             wedding_contract.confirmWedding({"from": fiances[0]})
 
     def test_double_confirm_does_not_change_anything(self, chain, accounts):
-        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_date+START_TO_VOTE_SECONDS)
+        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(
+            chain, accounts
+        )
+        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS)
         wedding_contract.confirmWedding({"from": fiances[0]})
         wedding_contract.confirmWedding({"from": fiances[0]})
 
     def test_wedding_certificate_issued_after_final_confirm(self, chain, accounts):
-        fiances, wedding_contract, wedding_date, registry_contract = self.create_generic_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_date+START_TO_VOTE_SECONDS)
+        (
+            fiances,
+            wedding_contract,
+            wedding_date,
+            registry_contract,
+        ) = self.create_generic_wedding(chain, accounts)
+        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS)
         wedding_contract.confirmWedding({"from": fiances[0]})
         wedding_contract.confirmWedding({"from": fiances[1]})
         assert registry_contract.getMyWeddingTokenId({"from": fiances[0]}) == 0
 
     def test_no_certificate_issued_if_not_all_fiances_confirmed(self, chain, accounts):
-        fiances, wedding_contract, wedding_date, registry_contract = self.create_generic_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_date+START_TO_VOTE_SECONDS)
+        (
+            fiances,
+            wedding_contract,
+            wedding_date,
+            registry_contract,
+        ) = self.create_generic_wedding(chain, accounts)
+        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS)
         wedding_contract.confirmWedding({"from": fiances[0]})
         with brownie.reverts("Only married accounts can call this function"):
             registry_contract.getMyWeddingTokenId({"from": fiances[0]})
@@ -496,12 +561,15 @@ class TestConfirmWedding:
             registry_contract.getMyWeddingTokenId({"from": fiances[1]})
 
     def test_event_emitted_after_each_confirm(self, chain, accounts):
-        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_date+START_TO_VOTE_SECONDS)
+        fiances, wedding_contract, wedding_date, _ = self.create_generic_wedding(
+            chain, accounts
+        )
+        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS)
         tx = wedding_contract.confirmWedding({"from": fiances[0]})
         assert len(tx.events) == 1
         tx = wedding_contract.confirmWedding({"from": fiances[1]})
         assert len(tx.events) == 3
+
 
 class TestDivorce:
     @pytest.mark.skip
@@ -511,9 +579,11 @@ class TestDivorce:
         fiances = accounts[2:4]
 
         start_of_day = (chain.time() // DAY_IN_SECONDS) * DAY_IN_SECONDS
-        wedding_date = start_of_day + 3 *DAY_IN_SECONDS # start of 3rd day
+        wedding_date = start_of_day + 3 * DAY_IN_SECONDS  # start of 3rd day
         wedding_time = wedding_date + START_TO_VOTE_SECONDS
-        wedding_contract = add_pending_wedding(chain, registry_contract, fiances, wedding_date, [])
+        wedding_contract = add_pending_wedding(
+            chain, registry_contract, fiances, wedding_date, []
+        )
         chain.mine(timestamp=wedding_time)
 
         # confirm wedding
@@ -523,78 +593,125 @@ class TestDivorce:
         return authorities, fiances, wedding_contract, wedding_time, registry_contract
 
     def test_only_callable_after_wedding_day(self, chain, accounts):
-        _, fiances, wedding_contract, _ , _= self.create_finished_wedding(chain, accounts)
+        _, fiances, wedding_contract, _, _ = self.create_finished_wedding(
+            chain, accounts
+        )
         with brownie.reverts("Action can only be performed after the wedding day"):
             wedding_contract.divorce({"from": fiances[0]})
 
     def test_only_callable_if_not_cancelled(self, chain, accounts):
-        _, fiances, wedding_contract, wedding_time, _ = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
+        _, fiances, wedding_contract, wedding_time, _ = self.create_finished_wedding(
+            chain, accounts
+        )
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
         wedding_contract.divorce({"from": fiances[0]})
         wedding_contract.divorce({"from": fiances[1]})
         with brownie.reverts("The wedding has been canceled"):
             wedding_contract.divorce({"from": fiances[0]})
 
     def test_only_callable_by_fiances_or_authorities(self, chain, accounts):
-        authorities, fiances, wedding_contract, wedding_time, _ = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
-        non_authorized = [acc for acc in accounts[:12] if acc not in [*fiances, *authorities]]
+        (
+            authorities,
+            fiances,
+            wedding_contract,
+            wedding_time,
+            _,
+        ) = self.create_finished_wedding(chain, accounts)
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
+        non_authorized = [
+            acc for acc in accounts[:12] if acc not in [*fiances, *authorities]
+        ]
         for acc in non_authorized:
             with brownie.reverts("Only fiances or authorities can call this function"):
                 wedding_contract.divorce({"from": acc})
 
     def test_divorce_by_2_spouses(self, chain, accounts):
-        _, fiances, wedding_contract, wedding_time, registry_contract = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
+        (
+            _,
+            fiances,
+            wedding_contract,
+            wedding_time,
+            registry_contract,
+        ) = self.create_finished_wedding(chain, accounts)
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
         wedding_contract.divorce({"from": fiances[0]})
         wedding_contract.divorce({"from": fiances[1]})
         with brownie.reverts("Only married accounts can call this function"):
             registry_contract.getMyWeddingTokenId({"from": fiances[0]})
 
     def test_divorce_by_1_spouse_and_1_authority(self, chain, accounts):
-        authorities, fiances, wedding_contract, wedding_time, registry_contract = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
+        (
+            authorities,
+            fiances,
+            wedding_contract,
+            wedding_time,
+            registry_contract,
+        ) = self.create_finished_wedding(chain, accounts)
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
         wedding_contract.divorce({"from": fiances[0]})
         wedding_contract.divorce({"from": authorities[0]})
         with brownie.reverts("Only married accounts can call this function"):
             registry_contract.getMyWeddingTokenId({"from": fiances[0]})
 
     def test_divorce_fails_if_2_authorities(self, chain, accounts):
-        authorities, fiances, wedding_contract, wedding_time, registry_contract = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
+        (
+            authorities,
+            fiances,
+            wedding_contract,
+            wedding_time,
+            registry_contract,
+        ) = self.create_finished_wedding(chain, accounts)
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
         wedding_contract.divorce({"from": authorities[0]})
         with brownie.reverts("Authority already initiated divorce"):
-                wedding_contract.divorce({"from": authorities[1]})
+            wedding_contract.divorce({"from": authorities[1]})
         assert registry_contract.getMyWeddingTokenId({"from": fiances[0]}) == 0
 
     def test_divorce_can_only_be_called_once_per_fiance(self, chain, accounts):
-        _, fiances, wedding_contract, wedding_time, registry_contract = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
+        (
+            _,
+            fiances,
+            wedding_contract,
+            wedding_time,
+            registry_contract,
+        ) = self.create_finished_wedding(chain, accounts)
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
         wedding_contract.divorce({"from": fiances[0]})
         with brownie.reverts("You already initiated or approved divorce"):
             wedding_contract.divorce({"from": fiances[0]})
 
     def test_initiate_wedding_possible_after_divorce(self, chain, accounts):
-        _, fiances, wedding_contract, wedding_time, registry_contract = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
+        (
+            _,
+            fiances,
+            wedding_contract,
+            wedding_time,
+            registry_contract,
+        ) = self.create_finished_wedding(chain, accounts)
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
         wedding_contract.divorce({"from": fiances[0]})
         wedding_contract.divorce({"from": fiances[1]})
         registry_contract.initiateWedding(
-            fiances, wedding_time+10*DAY_IN_SECONDS, {"from": fiances[0]}
+            fiances, wedding_time + 10 * DAY_IN_SECONDS, {"from": fiances[0]}
         )
 
     def test_event_emitted_after_divorce_initiated(self, chain, accounts):
-        _, fiances, wedding_contract, wedding_time, _ = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
+        _, fiances, wedding_contract, wedding_time, _ = self.create_finished_wedding(
+            chain, accounts
+        )
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
         tx = wedding_contract.divorce({"from": fiances[0]})
         assert len(tx.events) == 1
 
     def test_event_emitted_after_successful_divorce(self, chain, accounts):
-        _, fiances, wedding_contract, wedding_time, _ = self.create_finished_wedding(chain, accounts)
-        chain.mine(timestamp=wedding_time+DAY_IN_SECONDS)
+        _, fiances, wedding_contract, wedding_time, _ = self.create_finished_wedding(
+            chain, accounts
+        )
+        chain.mine(timestamp=wedding_time + DAY_IN_SECONDS)
         wedding_contract.divorce({"from": fiances[0]})
         tx = wedding_contract.divorce({"from": fiances[1]})
         assert len(tx.events) == 2
+
 
 class TestGetMyPartners:
     def test_getMyPartners_only_callable_by_fiances(self, chain, accounts):
