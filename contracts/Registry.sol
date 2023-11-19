@@ -12,7 +12,7 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
 
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
     mapping(address => bool) internal deployedContracts; // for checking whether a calling address belongs to a deployed contract, using a hashmap for O(1) lookup instead of looping through an array
-    mapping(uint256 => string) internal tokenURIs; // for storing the tokenURI (ERC721 requires uint256) of a wedding token
+    // mapping(uint256 => string) internal tokenURIs; // for storing the tokenURI (ERC721 requires uint256) of a wedding token
     uint256 internal weddingCounter; // we need to use uint256 here because ERC721Enumerable uses uint256 for the token ids
 
     //// events
