@@ -142,29 +142,164 @@ class TestRevokeEngagement:
 
 
 class TestApproveGuests:
-    def test_onyl_callable_by_fiances(self):
-        pass
+    def test_only_callable_by_fiances(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
 
-    def test_only_callable_before_wedding(self):
-        pass
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
 
-    def test_onyl_callable_when_not_cancelled(self):
-        pass
+        # only fiances should be allowed to approve guests
+        with brownie.reverts("Only fiances can call this function"):
+            wedding_contract.approveGuest(guests[0], {"from": authorities[0]})
+        with brownie.reverts("Only fiances can call this function"):
+            wedding_contract.approveGuest(guests[0], {"from": guests[0]})
+        with brownie.reverts("Only fiances can call this function"):
+            wedding_contract.approveGuest(guests[0], {"from": unknowns[0]})
 
-    def test_approved_guest_can_vote(self):
-        pass
+    def test_only_callable_before_wedding(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        wedding_date = chain.time() + 86400
 
-    def test_guest_not_approved_if_not_all_fiances_approved(self):
-        pass
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
 
-    def test_double_approve_does_not_change_anything(self):
-        pass
+        # timetravel to wedding day
+        chain.mine(timestamp=wedding_date)
 
-    def test_guest_can_only_be_approved_once(self):
-        pass
+        # guests cannot be added anymore, because it's already the wedding day
+        with brownie.reverts("Action can only be performed before the wedding day"):
+            wedding_contract.approveGuest(guests[0], {"from": fiances[0]})
 
-    def test_invitation_event_sent_after_final_approve(self):
-        pass
+    def test_only_callable_when_not_cancelled(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        wedding_date = chain.time() + 86400
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        # one fiance revokes the wedding directly after it was initiated
+        wedding_contract.revokeEngagement({"from": fiances[0]})
+
+        # guests cannot be added anymore, because the wedding is revoked
+        with brownie.reverts("The wedding has been canceled"):
+            wedding_contract.approveGuest(guests[0], {"from": fiances[0]})
+
+    def test_approved_guest_can_vote(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
+        start_of_wedding_day = wedding_date - (wedding_date % 86400);
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        for fiance in fiances:
+            for guest in guests:
+                wedding_contract.approveGuest(guest, {"from": fiance})
+
+        # timetravel to wedding day
+        chain.mine(timestamp=start_of_wedding_day)
+
+        # approved guests can vote
+        tx = wedding_contract.voteAgainstWedding({"from": guests[0]})
+        assert "voteAgainstWeddingOccured" in tx.events
+
+    def test_guest_not_approved_if_not_all_fiances_approved(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
+        start_of_wedding_day = wedding_date - (wedding_date % 86400);
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        # not all fiances approve guest
+        for fiance in fiances[:-1]:
+            wedding_contract.approveGuest(guests[0], {"from": fiance})
+
+        # timetravel to wedding day
+        chain.mine(timestamp=start_of_wedding_day)
+
+        # guest can only vote if all fiances approved the guest
+        with brownie.reverts("Only guests with voting right can call this function"):
+            wedding_contract.voteAgainstWedding({"from": guests[0]})
+
+    def test_guest_can_only_be_approved_once(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
+        start_of_wedding_day = wedding_date - (wedding_date % 86400);
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+
+        for fiance in fiances:
+            for guest in guests:
+                wedding_contract.approveGuest(guest, {"from": fiance})
+
+        with brownie.reverts("Guest is already approved"):
+            wedding_contract.approveGuest(guests[0], {"from": fiances[0]})
+
+    def test_invitation_event_sent_after_final_approve(self, chain, accounts):
+        # Test setup
+        authorities = accounts[0:2]
+        fiances = accounts[2:5]
+        guests = accounts[5:9]
+        unknowns = accounts[9:]
+        wedding_date = chain.time() + 86400
+        start_of_wedding_day = wedding_date - (wedding_date % 86400);
+
+        registry_contract = create_registry_contract(authorities)
+        wedding_contract_addr = registry_contract.initiateWedding(
+            fiances, wedding_date, {"from": fiances[0]}
+        ).return_value
+        wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+        for fiance in fiances[:-1]:
+            wedding_contract.approveGuest(guests[0], {"from": fiance})
+
+        # invitation event is sent after last approval
+        tx = wedding_contract.approveGuest(guests[0], {"from": fiances[-1]})
+        assert "inviteSent" in tx.events
 
 
 class TestVoteAgainstWedding:
