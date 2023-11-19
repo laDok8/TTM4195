@@ -323,10 +323,11 @@ contract WeddingContract is IWeddingContract, Initializable {
         isCanceled = true;
     }
 
-    function getMyPartnerAddresses()
+    function getMyPartnersAddresses()
         external
         view
         onlyFiances
+        onlyNotCanceled
         returns (address[] memory)
     {
         /* Returns the addresses of the partners of the caller. 

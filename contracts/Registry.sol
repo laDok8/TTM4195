@@ -12,7 +12,8 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
 
     mapping(address => address) internal fianceAddressToWeddingContract; // for checking whether a address is married
     mapping(address => bool) internal deployedContracts; // for checking whether a calling address belongs to a deployed contract, using a hashmap for O(1) lookup instead of looping through an array
-    mapping(uint256 => string) internal tokenURIs; // for storing the tokenURI of a wedding token
+    mapping(uint256 => string) internal tokenURIs; // for storing the tokenURI (ERC721 requires uint256) of a wedding token
+    uint256 internal weddingCounter; // we need to use uint256 here because ERC721Enumerable uses uint256 for the token ids
 
     //// events
     event AuthoritiesUpdated(address[] authorities);
@@ -216,13 +217,13 @@ contract WeddingRegistry is IWeddingRegistry, ERC721Enumerable {
             fianceAddressToWeddingContract[_fiances[i]] = msg.sender;
         }
 
-        uint256 tokenId = totalSupply();
-        _mint(msg.sender, tokenId);
+        _mint(msg.sender, weddingCounter);
         // since the task description does not specify what data should be stored in the token, we just added this dummy data to show that we know how to do it
         // The data like the wedding date and the fiances is stored in the wedding contract already so theres no need to store it here again
         tokenURIs[
-            tokenId
+            weddingCounter
         ] = "Here we can add arbitrary data to the token. For example a link to some off chain data.";
+        weddingCounter++;
 
         emit WeddingCertificateIssued(_fiances);
     }

@@ -223,9 +223,9 @@ class TestParallelWeddingScenarios:
             registry_contract.getMyWeddingTokenId({"from": accounts[4]})
 
         # check that the second wedding is registered
-        # after a wedding got divroced the tokenId is also available again !!! -> FIXME
-        assert registry_contract.getMyWeddingTokenId({"from": accounts[5]}) == 0
-        assert registry_contract.getMyWeddingTokenId({"from": accounts[6]}) == 0
+        # after a wedding got divroced the tokenId is also available again !!!
+        assert registry_contract.getMyWeddingTokenId({"from": accounts[5]}) == 1
+        assert registry_contract.getMyWeddingTokenId({"from": accounts[6]}) == 1
 
         # assert that the list of fiances are correct
         assert (
@@ -288,30 +288,32 @@ class TestGetWeddingTokenId:
             assert registry_contract.getMyWeddingTokenId({"from": fi}) == 1
 
     def test_getMyWeddingTokenId_after_divorce(self, chain, accounts):
-        registry_contract = create_registry_contract(accounts[0:3])
-        wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+        registry_contract = create_registry_contract(accounts[0:1])
+        wedding_contract_1 = add_succesfull_wedding(
+            chain, registry_contract, accounts[1:3], chain.time() + 86400, []
         )
-        assert registry_contract.getMyWeddingTokenId({"from": accounts[4]}) == 0
+        wedding_contract_2 = add_succesfull_wedding(
+            chain, registry_contract, accounts[3:5], chain.time() + 86400, []
+        )
+        wedding_contract_3 = add_succesfull_wedding(
+            chain, registry_contract, accounts[5:7], chain.time() + 86400, []
+        )
+
+        assert registry_contract.getMyWeddingTokenId({"from": accounts[1]}) == 0
+        assert registry_contract.getMyWeddingTokenId({"from": accounts[3]}) == 1
+        assert registry_contract.getMyWeddingTokenId({"from": accounts[5]}) == 2
 
         chain.mine(timestamp=chain.time() + 86400)
-        divorce_wedding(wedding_contract, accounts[4:6])
+        divorce_wedding(wedding_contract_2, accounts[3:5])
 
-        for acc in accounts[4:6]:
+        for acc in accounts[3:5]:
             with brownie.reverts("Only married accounts can call this function"):
                 registry_contract.getMyWeddingTokenId({"from": acc})
 
-        wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
-        )
-        assert registry_contract.getMyWeddingTokenId({"from": accounts[4]}) == 0
-
-        add_succesfull_wedding(
+        wedding_contract_4 = add_succesfull_wedding(
             chain, registry_contract, accounts[7:9], chain.time() + 86400, []
         )
-
-        assert registry_contract.getMyWeddingTokenId({"from": accounts[4]}) == 0
-        assert registry_contract.getMyWeddingTokenId({"from": accounts[7]}) == 1
+        assert registry_contract.getMyWeddingTokenId({"from": accounts[7]}) == 3
 
 
 class TestGetWeddingContractAddress:
