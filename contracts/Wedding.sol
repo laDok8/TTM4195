@@ -94,14 +94,6 @@ contract WeddingContract is IWeddingContract, Initializable {
         _;
     }
 
-    modifier onlyApprovedGuests() {
-        /* Only guests which are approved by all fiances can call functions with this modifier. */
-        require(
-            approvedGuests[msg.sender],
-            "Only guests can call this function"
-        );
-        _;
-    }
 
     modifier onlyGuestsWithVotingRight() {
         /* Only guests which are approved by all fiances and did not vote against the 
