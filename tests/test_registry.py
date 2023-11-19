@@ -10,6 +10,7 @@ from fixtures import (
     add_parallel_pending_weddings,
 )
 
+DAY_IN_SECONDS = 86400
 
 class TestAuthority:
     def test_isAuthority(self, accounts):
@@ -65,7 +66,7 @@ class TestInitiateWedding:
         with brownie.reverts("Duplicate fiance addresses"):
             registry_contract.initiateWedding(
                 [accounts[4], accounts[5], accounts[4]],
-                chain.time() + 86400,
+                chain.time() + DAY_IN_SECONDS,
                 {"from": accounts[4]},
             )
 
@@ -74,7 +75,7 @@ class TestInitiateWedding:
 
         with brownie.reverts("At least two fiances are required"):
             registry_contract.initiateWedding(
-                [accounts[4]], chain.time() + 86400, {"from": accounts[0]}
+                [accounts[4]], chain.time() + DAY_IN_SECONDS, {"from": accounts[0]}
             )
 
     def test_initiateWedding_future_date(self, chain, accounts):
@@ -88,36 +89,36 @@ class TestInitiateWedding:
     def test_initiateWedding_all_fiances_are_unmarried(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         with brownie.reverts("One of the fiances is already married"):
             registry_contract.initiateWedding(
                 [accounts[4], accounts[7], accounts[8]],
-                chain.time() + 86400,
+                chain.time() + DAY_IN_SECONDS,
                 {"from": accounts[4]},
             )
 
     def test_initiateWedding_callable_after_divorce(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
-        chain.mine(timestamp=chain.time() + 86400)
+        chain.mine(timestamp=chain.time() + DAY_IN_SECONDS)
         wedding_contract.divorce({"from": accounts[4]})
         wedding_contract.divorce({"from": accounts[5]})
 
         registry_contract.initiateWedding(
             [accounts[4], accounts[7]],
-            chain.time() + 86400,
+            chain.time() + DAY_IN_SECONDS,
             {"from": accounts[4]},
         )
 
     def test_event_emitted_on_initiateWedding(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
 
-        wedding_date = chain.time() + 86400
+        wedding_date = chain.time() + DAY_IN_SECONDS
         tx = registry_contract.initiateWedding(
             accounts[4:6], wedding_date, {"from": accounts[4]}
         )
@@ -134,7 +135,7 @@ class TestParallelWeddingScenarios:
             chain,
             registry_contract,
             [accounts[4:6], accounts[7:9]],
-            chain.time() + 86400,
+            chain.time() + DAY_IN_SECONDS,
         )
 
         for acc in accounts[4:9]:
@@ -158,7 +159,7 @@ class TestParallelWeddingScenarios:
             chain,
             registry_contract,
             [accounts[4:6], accounts[4:6]],
-            chain.time() + 86400,
+            chain.time() + DAY_IN_SECONDS,
         )
 
         # first wedding is finalized
@@ -178,7 +179,7 @@ class TestParallelWeddingScenarios:
             chain,
             registry_contract,
             [accounts[4:6], accounts[5:7]],
-            chain.time() + 86400,
+            chain.time() + DAY_IN_SECONDS,
         )
 
         # first wedding is finalized
@@ -195,9 +196,9 @@ class TestParallelWeddingScenarios:
 
     def test_parallel_weddings_with_divorce(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
-        wedding_date_1 = chain.time() + 86400
-        wedding_date_2 = chain.time() + 2 * 86400
-        wedding_date_2_start = wedding_date_2 - (wedding_date_2 % 86400)
+        wedding_date_1 = chain.time() + DAY_IN_SECONDS
+        wedding_date_2 = chain.time() + 2 * DAY_IN_SECONDS
+        wedding_date_2_start = wedding_date_2 - (wedding_date_2 % DAY_IN_SECONDS)
 
         # add pending wedding for next day
         wedding_contract_1 = WeddingContract.at(
@@ -246,7 +247,7 @@ class TestGetWeddingTokenId:
     def test_getMyWeddingTokenId_only_callable_by_fiance(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         for acc in accounts:
@@ -259,9 +260,9 @@ class TestGetWeddingTokenId:
     def test_getMyWeddingTokeId_not_callable_after_burn(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
-        chain.mine(timestamp=chain.time() + 86400)
+        chain.mine(timestamp=chain.time() + DAY_IN_SECONDS)
         divorce_wedding(wedding_contract, accounts[4:6])
 
         for acc in accounts[4:6]:
@@ -271,7 +272,7 @@ class TestGetWeddingTokenId:
     def test_getMyWeddingTokenId_only_callable_after_issue(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         add_pending_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         for acc in accounts:
@@ -283,14 +284,14 @@ class TestGetWeddingTokenId:
 
         fiances_1 = accounts[4:6]
         add_succesfull_wedding(
-            chain, registry_contract, fiances_1, chain.time() + 86400, []
+            chain, registry_contract, fiances_1, chain.time() + DAY_IN_SECONDS, []
         )
         for fi in fiances_1:
             assert registry_contract.getMyWeddingTokenId({"from": fi}) == 0
 
         fiances_2 = accounts[7:9]
         add_succesfull_wedding(
-            chain, registry_contract, fiances_2, chain.time() + 86400, []
+            chain, registry_contract, fiances_2, chain.time() + DAY_IN_SECONDS, []
         )
         for fi in fiances_2:
             assert registry_contract.getMyWeddingTokenId({"from": fi}) == 1
@@ -298,20 +299,20 @@ class TestGetWeddingTokenId:
     def test_getMyWeddingTokenId_after_divorce(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:1])
         wedding_contract_1 = add_succesfull_wedding(
-            chain, registry_contract, accounts[1:3], chain.time() + 86400, []
+            chain, registry_contract, accounts[1:3], chain.time() + DAY_IN_SECONDS, []
         )
         wedding_contract_2 = add_succesfull_wedding(
-            chain, registry_contract, accounts[3:5], chain.time() + 86400, []
+            chain, registry_contract, accounts[3:5], chain.time() + DAY_IN_SECONDS, []
         )
         wedding_contract_3 = add_succesfull_wedding(
-            chain, registry_contract, accounts[5:7], chain.time() + 86400, []
+            chain, registry_contract, accounts[5:7], chain.time() + DAY_IN_SECONDS, []
         )
 
         assert registry_contract.getMyWeddingTokenId({"from": accounts[1]}) == 0
         assert registry_contract.getMyWeddingTokenId({"from": accounts[3]}) == 1
         assert registry_contract.getMyWeddingTokenId({"from": accounts[5]}) == 2
 
-        chain.mine(timestamp=chain.time() + 86400)
+        chain.mine(timestamp=chain.time() + DAY_IN_SECONDS)
         divorce_wedding(wedding_contract_2, accounts[3:5])
 
         for acc in accounts[3:5]:
@@ -319,7 +320,7 @@ class TestGetWeddingTokenId:
                 registry_contract.getMyWeddingTokenId({"from": acc})
 
         wedding_contract_4 = add_succesfull_wedding(
-            chain, registry_contract, accounts[7:9], chain.time() + 86400, []
+            chain, registry_contract, accounts[7:9], chain.time() + DAY_IN_SECONDS, []
         )
         assert registry_contract.getMyWeddingTokenId({"from": accounts[7]}) == 3
 
@@ -328,7 +329,7 @@ class TestGetWeddingContractAddress:
     def test_getMyWeddingContractAddress_only_callable_by_fiance(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         for acc in accounts:
@@ -344,9 +345,9 @@ class TestGetWeddingContractAddress:
     def test_getMyWeddingContractAddress_not_callable_after_burn(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
-        chain.mine(timestamp=chain.time() + 86400)
+        chain.mine(timestamp=chain.time() + DAY_IN_SECONDS)
         divorce_wedding(wedding_contract, accounts[4:6])
 
         for acc in accounts[4:6]:
@@ -358,7 +359,7 @@ class TestGetWeddingContractAddress:
     ):
         registry_contract = create_registry_contract(accounts[0:3])
         add_pending_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         for acc in accounts:
@@ -370,7 +371,7 @@ class TestGetWeddingContractAddress:
 
         fiances_1 = accounts[4:6]
         wedding_contract_1 = add_succesfull_wedding(
-            chain, registry_contract, fiances_1, chain.time() + 86400, []
+            chain, registry_contract, fiances_1, chain.time() + DAY_IN_SECONDS, []
         )
         for fi in fiances_1:
             assert (
@@ -380,7 +381,7 @@ class TestGetWeddingContractAddress:
 
         fiances_2 = accounts[7:9]
         wedding_contract_2 = add_succesfull_wedding(
-            chain, registry_contract, fiances_2, chain.time() + 86400, []
+            chain, registry_contract, fiances_2, chain.time() + DAY_IN_SECONDS, []
         )
         for fi in fiances_2:
             assert (
@@ -395,7 +396,7 @@ class TestDeployedContractModifiers:
     ):
         registry_contract = create_registry_contract(accounts[0:3])
         wedding_contract = add_pending_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         for acc in accounts:
@@ -414,7 +415,7 @@ class TestDeployedContractModifiers:
     ):
         registry_contract = create_registry_contract(accounts[0:3])
         wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         for acc in accounts:
@@ -430,7 +431,7 @@ class TestTokenURI:
     def test_tokenURI_retreival(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         token_id = registry_contract.getMyWeddingTokenId({"from": accounts[4]})
@@ -442,7 +443,7 @@ class TestTokenURI:
     def test_tokenURI_onyl_callable_by_corresponding_fiances(self, chain, accounts):
         registry_contract = create_registry_contract(accounts[0:3])
         wedding_contract = add_succesfull_wedding(
-            chain, registry_contract, accounts[4:6], chain.time() + 86400, []
+            chain, registry_contract, accounts[4:6], chain.time() + DAY_IN_SECONDS, []
         )
 
         token_id = registry_contract.getMyWeddingTokenId({"from": accounts[4]})
