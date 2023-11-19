@@ -337,28 +337,32 @@ class TestVoteAgainstWedding:
 
     # this nondeterministic test fails sometimes
     def test_only_callable_on_wedding_day_before_deadline(self, chain, accounts):
-        _, guests, wedding_contract, wedding_date = self.create_generic_wedding(
-            chain, accounts
+        registry_contract = create_registry_contract(accounts[0:2])
+        wedding_date = chain.time() + DAY_IN_SECONDS
+        wedding_date_begin = (wedding_date // DAY_IN_SECONDS) * DAY_IN_SECONDS
+
+        wedding_contract = WeddingContract.at(
+            registry_contract.initiateWedding(
+                accounts[2:4],
+                wedding_date,
+                {"from": accounts[2]},
+            ).return_value
         )
+
+        wedding_contract.approveGuest(accounts[5], {"from": accounts[2]})
+        wedding_contract.approveGuest(accounts[5], {"from": accounts[3]})
 
         with brownie.reverts(
             "Action can only be performed within the first 10 hours of the wedding day"
         ):
-            wedding_contract.voteAgainstWedding({"from": guests[0]})
-        chain.mine(timestamp=wedding_date - 1)
+            wedding_contract.voteAgainstWedding({"from": accounts[5]})
+
+        chain.mine(timestamp=wedding_date_begin + START_TO_VOTE_SECONDS + 10)
+
         with brownie.reverts(
             "Action can only be performed within the first 10 hours of the wedding day"
         ):
-            wedding_contract.voteAgainstWedding({"from": guests[0]})
-        chain.mine(timestamp=wedding_date)
-        wedding_contract.voteAgainstWedding({"from": guests[1]})
-        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS - 1)
-        wedding_contract.voteAgainstWedding({"from": guests[2]})
-        chain.mine(timestamp=wedding_date + START_TO_VOTE_SECONDS)
-        with brownie.reverts(
-            "Action can only be performed within the first 10 hours of the wedding day"
-        ):
-            wedding_contract.voteAgainstWedding({"from": guests[0]})
+            wedding_contract.voteAgainstWedding({"from": accounts[5]})
 
     def test_only_callable_by_guest(self, chain, accounts):
         _, guests, wedding_contract, wedding_date = self.create_generic_wedding(
