@@ -135,12 +135,13 @@ contract WeddingContract is IWeddingContract, Initializable {
         address[] memory array
     ) internal pure returns (bool) {
         /* Checks if an array contains duplicates. 
-        This uses a basic O(n^2) algorithm.
+        This uses a basic O(n^2) algorithm. Therfore we require that the array is not too long.
         Since this function is only used once to check the fiances in the constructor and
         it can be assumed that the number of fiances is small, this is not a problem.
         */
-        for (uint256 i = 0; i < array.length; i++) {
-            for (uint256 j = 0; j < i; j++) {
+        require(array.length < 256, "Array too long");
+        for (uint8 i = 0; i < array.length; i++) {
+            for (uint8 j = 0; j < i; j++) {
                 if (array[i] == array[j]) {
                     return true;
                 }
