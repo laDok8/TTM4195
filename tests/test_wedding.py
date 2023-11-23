@@ -15,6 +15,8 @@ from fixtures import (
 DAY_IN_SECONDS = 600
 START_TO_VOTE_SECONDS = 120
 
+N_GUESTS = 2
+
 
 class TestRevokeEngagement:
     def test_no_functions_callable_after_revoke(self, chain, accounts):
@@ -771,3 +773,43 @@ class TestGetMyPartners:
             assert (
                 wedding_contract.getMyPartnersAddresses({"from": acc}) == accounts[2:6]
             )
+
+
+# class TestGuestApproveOverhead:
+#     def test_approve_guests(self, chain, accounts):
+#         registry_contract = create_registry_contract(accounts[0:2])
+
+#         fiances = accounts[2:4]
+#         wedding_contract_addr = registry_contract.initiateWedding(
+#             fiances, chain.time() + DAY_IN_SECONDS, {"from": fiances[0]}
+#         ).return_value
+#         wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+#         guests = accounts[4 : 4 + N_GUESTS]
+#         for fiance in fiances:
+#             for guest in guests:
+#                 wedding_contract.approveGuest(guest, {"from": fiance})
+
+#     def test_approve_guests_list_version(self, chain, accounts):
+#         registry_contract = create_registry_contract(accounts[0:2])
+
+#         fiances = accounts[2:6]
+#         wedding_contract_addr = registry_contract.initiateWedding(
+#             fiances, chain.time() + DAY_IN_SECONDS, {"from": fiances[0]}
+#         ).return_value
+#         wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+#         guests = accounts[4 : 4 + N_GUESTS]
+#         wedding_contract.approveGuests(guests, {"from": fiances[0]})
+
+#     def test_approve_guests_list_version_2(self, chain, accounts):
+#         registry_contract = create_registry_contract(accounts[0:2])
+
+#         fiances = accounts[2:6]
+#         wedding_contract_addr = registry_contract.initiateWedding(
+#             fiances, chain.time() + DAY_IN_SECONDS, {"from": fiances[0]}
+#         ).return_value
+#         wedding_contract = WeddingContract.at(wedding_contract_addr)
+
+#         guests = accounts[4 : 4 + N_GUESTS]
+#         wedding_contract.approveGuests2(guests, {"from": fiances[0]})
