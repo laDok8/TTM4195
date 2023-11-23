@@ -12,8 +12,8 @@ from fixtures import (
     add_pending_wedding_non_approved_guests,
 )
 
-DAY_IN_SECONDS = 86400
-START_TO_VOTE_SECONDS = 36000
+DAY_IN_SECONDS = 600
+START_TO_VOTE_SECONDS = 120
 
 
 class TestRevokeEngagement:

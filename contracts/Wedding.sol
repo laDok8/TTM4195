@@ -22,8 +22,8 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     bool internal isCanceled = false; // only needed to revert any function calls if the wedding is canceled (selfdestruct is not used)
 
-    uint16 public constant timeToVote = 36000; // 10 hours in seconds, time interval at the wedding day in which the guests can vote against the wedding
-    uint24 public constant dayInSeconds = 86400; // 24 hours in seconds, used to convert timestamps to start of the day
+    uint16 public constant timeToVote = 120; // 10 hours in seconds, time interval at the wedding day in which the guests can vote against the wedding
+    uint24 public constant dayInSeconds = 600; // 24 hours in seconds, used to convert timestamps to start of the day
 
     event inviteSent(address invitee);
     event weddingConfirmed(address confirmedFiance);

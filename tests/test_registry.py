@@ -10,7 +10,8 @@ from fixtures import (
     add_parallel_pending_weddings,
 )
 
-DAY_IN_SECONDS = 86400
+DAY_IN_SECONDS = 600
+START_TO_VOTE_SECONDS = 120
 
 
 class TestAuthority:
@@ -215,7 +216,7 @@ class TestParallelWeddingScenarios:
         )
 
         # finalize the first wedding
-        chain.mine(timestamp=wedding_date_1 + 36500)
+        chain.mine(timestamp=wedding_date_1 + START_TO_VOTE_SECONDS + 1)
         wedding_contract_1.confirmWedding({"from": accounts[5]})
         wedding_contract_1.confirmWedding({"from": accounts[4]})
 
@@ -224,7 +225,7 @@ class TestParallelWeddingScenarios:
         divorce_wedding(wedding_contract_1, accounts[4:6])
 
         # finalize the second wedding -> should be possible agsin
-        chain.mine(timestamp=wedding_date_2_start + 36500)
+        chain.mine(timestamp=wedding_date_2_start + START_TO_VOTE_SECONDS + 1)
         wedding_contract_2.confirmWedding({"from": accounts[5]})
         wedding_contract_2.confirmWedding({"from": accounts[6]})
 
