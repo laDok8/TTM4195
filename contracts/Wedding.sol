@@ -22,8 +22,8 @@ contract WeddingContract is IWeddingContract, Initializable {
 
     bool internal isCanceled = false; // only needed to revert any function calls if the wedding is canceled (selfdestruct is not used)
 
-    uint16 public constant timeToVote = 36000; // 10 hours in seconds, time interval at the wedding day in which the guests can vote against the wedding
-    uint24 public constant dayInSeconds = 86400; // 24 hours in seconds, used to convert timestamps to start of the day
+    uint16 public constant timeToVote = 120; // 10 hours in seconds, time interval at the wedding day in which the guests can vote against the wedding
+    uint24 public constant dayInSeconds = 600; // 24 hours in seconds, used to convert timestamps to start of the day
 
     event inviteSent(address invitee);
     event weddingConfirmed(address confirmedFiance);
@@ -206,6 +206,83 @@ contract WeddingContract is IWeddingContract, Initializable {
             emit inviteSent(_guest);
         }
     }
+
+    // function approveGuests(
+    //     address[] memory _guests
+    // ) external onlyFiances onlyBeforeWeddingDay onlyNotCanceled {
+    //     /* Adds guests to the address-appovals-mapping of potential guests and marks the approval of the sender.
+    //     If the passed addresses are already potential guests, the approval of the sender is marked.
+    //     If the guests are approved by all fiances, the guests are added to the list of approved guests and an event is emitted.
+    //     If a guest is already approved by the caller, nothing happens.
+    //     Can only be called by fiances and only before the wedding day and only if the wedding is not canceled.
+    //     */
+
+    //     // prevent that a guest is added to the list of approved guests more than once
+    //     for (uint32 i = 0; i < _guests.length; i++) {
+    //         require(!approvedGuests[_guests[i]], "Guest is already approved");
+    //     }
+
+    //     // Mark the approval
+    //     for (uint32 i = 0; i < _guests.length; i++) {
+    //         potentialGuests[_guests[i]][msg.sender] = true;
+    //     }
+
+    //     // Check if all fiances have approved the guest
+    //     for (uint32 i = 0; i < _guests.length; i++) {
+    //         bool guestApprovedByAllFiances = true;
+    //         for (uint32 j = 0; j < fiances.length; j++) {
+    //             if (!potentialGuests[_guests[i]][fiances[j]]) {
+    //                 guestApprovedByAllFiances = false;
+    //                 break;
+    //             }
+    //         }
+
+    //         // If all fiances have approved, emit an event and consider the guest approved
+    //         if (guestApprovedByAllFiances) {
+    //             approvedGuests[_guests[i]] = true;
+    //             require(
+    //                 type(uint16).max > approvedGuestsCounter,
+    //                 "Maximum number of guests reached"
+    //             );
+    //             approvedGuestsCounter++;
+    //             emit inviteSent(_guests[i]);
+    //         }
+    //     }
+    // }
+
+    // function approveGuests2(
+    //     address[] memory _guests
+    // ) external onlyFiances onlyBeforeWeddingDay onlyNotCanceled {
+    //     for (uint32 i = 0; i < _guests.length; i++) {
+    //         address _guest = _guests[i];
+
+    //         // prevent that a guest is added to the list of approved guests more than once
+    //         require(!approvedGuests[_guest], "Guest is already approved");
+
+    //         // Mark the approval
+    //         potentialGuests[_guest][msg.sender] = true;
+
+    //         // Check if all fiances have approved the guest
+    //         bool guestApprovedByAllFiances = true;
+    //         for (uint32 i = 0; i < fiances.length; i++) {
+    //             if (!potentialGuests[_guest][fiances[i]]) {
+    //                 guestApprovedByAllFiances = false;
+    //                 break;
+    //             }
+    //         }
+
+    //         // If all fiances have approved, emit an event and consider the guest approved
+    //         if (guestApprovedByAllFiances) {
+    //             approvedGuests[_guest] = true;
+    //             require(
+    //                 type(uint16).max > approvedGuestsCounter,
+    //                 "Maximum number of guests reached"
+    //             );
+    //             approvedGuestsCounter++;
+    //             emit inviteSent(_guest);
+    //         }
+    //     }
+    // }
 
     function revokeEngagement()
         external
